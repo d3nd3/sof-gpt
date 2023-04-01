@@ -7,7 +7,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 
-from selenium_stealth import stealth
+# from selenium_stealth import stealth
 
 import undetected_chromedriver as uc
 
