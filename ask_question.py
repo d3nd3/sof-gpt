@@ -1,10 +1,13 @@
 
+
 from selenium import webdriver
 
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
+
+from selenium_stealth import stealth
 
 import undetected_chromedriver as uc
 
@@ -16,15 +19,27 @@ import os
 import sys
 import time
 
-def contact(question,keep_alive_func):
+
+def contact(question,keep_alive_func=None):
 	# Start a webdriver instance and open ChatGPT
 	options = webdriver.ChromeOptions()
 	options.add_argument("--user-data-dir=/home/dindu/.config/chromium")
-
+	# options.add_argument("--headless")
 	
 	# driver = webdriver.Chrome(chromium_driver,options=options)
 	driver = uc.Chrome(options=options)
 	driver.get('https://chat.openai.com/chat')
+
+	# stealth(driver,
+	# 		languages=["en-US", "en"],
+	# 		vendor="Google Inc.",
+	# 		platform="Win32",
+	# 		webgl_vendor="Intel Inc.",
+	# 		renderer="Intel Iris OpenGL Engine",
+	# 		fix_hairline=True,
+	# 		)
+
+
 	driver.implicitly_wait(2)
 
 	# Find the input field and send a question
@@ -40,7 +55,8 @@ def contact(question,keep_alive_func):
 			break
 		# NoSuchElementException
 		except:
-			keep_alive_func()
+			if keep_alive_func:
+				keep_alive_func()
 		
 		if time.time() - before > 30:
 			print("Graceful exit, did not find element")
@@ -68,7 +84,8 @@ def contact(question,keep_alive_func):
 
 			# wait for it to grow to full size.
 			time.sleep(1)
-			keep_alive_func()
+			if keep_alive_func:
+				keep_alive_func()
 
 			if time.time() - before > 30:
 				print("Graceful exit, did not find element")
@@ -101,7 +118,6 @@ def runVersion():
 
 	contact(question)
 
-
 def libVersion(question, stay_alive):
 	question = question + ".  Finish your response with the word `BANANA`."
 	response = contact(question,stay_alive)
@@ -110,3 +126,7 @@ def libVersion(question, stay_alive):
 	
 	response = response.split("BANANA")[0]
 	return response
+
+
+if __name__ == "__main__":
+	runVersion()

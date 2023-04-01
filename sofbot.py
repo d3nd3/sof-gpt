@@ -1,3 +1,7 @@
+# sudo apt-get install xvfb
+# xvfb-run python3 ask_question.py 1+1
+# http://elementalselenium.com/tips/38-headless
+
 import socket
 import random
 import sys
@@ -6,7 +10,7 @@ import time
 import hashlib
 import errno
 import os
-
+import copy
 
 from ask_question import libVersion as gtp_ask
 
@@ -102,6 +106,79 @@ def packetIDtoName(packet):
 		return packet_names[packet]
 	return "bad data"
 
+
+chunks = []
+
+def generate_chunks_gpt():
+	global chunks, last_gpt_stamp, answer
+	last_gpt_stamp = time.time()
+	flood_msgs = 4
+	flood_persecond = 1
+	max_chunk_size = 150
+
+	# Split the message by words and newlines
+	segments = answer.split('\n')
+	
+	for segment in segments:
+		words = segment.split()
+		chunk = ''
+		for word in words:
+			if len(chunk) + len(word) + 1 <= max_chunk_size:
+				if chunk:
+					chunk += ' '
+				chunk += word
+			else:
+				chunks.append(chunk)
+				chunk = word
+		if chunk:
+			chunks.append(chunk)
+
+	# Send each chunk while preserving whole words and newlines
+	for i, chunk in enumerate(chunks):
+		# Add a newline character to the end of all chunks except the last one
+		if i < len(chunks) - 1:
+			chunk += '\n'
+
+len_prev=0
+def output_gpt(conn):
+	global chunks, last_gpt_stamp, len_prev
+	
+	# larger delay if the text length is larger because takes time to read
+	if len(chunks) and False:
+		if not len_prev :
+			len_prev = 0
+		if time.time() - last_gpt_stamp > 3+6*len_prev/150:
+			last_gpt_stamp = time.time()
+			conn.send(True, (f"\x04say {chunks[0]}\x00").encode('ISO 8859-1'))
+	
+			len_prev = len(chunks[0])
+			if len(chunks) == 1:
+				chunks = []
+				len_prev = 0
+			else:
+				chunks = chunks[1:]
+
+class UserCmd:
+	def __init__(self):
+		self.lookUp = True
+		self.lookDown = False
+		self.right = False
+		self.left = False
+		self.moveBack = False
+		self.moveForward = False
+		self.moveUp = False
+		self.moveDown = False
+		self.leanLeft = False
+		self.leanRight = False
+		self.shoot = False
+		self.moveLeft = False
+		self.moveRight = False
+		self.buttonsPressed = 0
+		self.fireEvent = False
+		self.altFireEvent = False
+		self.msec = 20
+		self.lightLevel = 5
+		self.mode = False
 
 chktbl2 = b'\x60\xe5\x60\x3e\x00\x00\x00\x00\xdf\xbf\x79\x3f\x61\xfe\x8a\x3d\x54\xe3\x55\x3e\xdf\xbf\x79\x3f\xa1\x67\xdb\x3e\x00\x00\x00\x00\xbe\x4d\x67\x3f\xe5\x62\x94\x3e\x5a\x9e\x57\x3e\x82\x02\x6f\x3f\x5f\x99\x07\x3e\x86\xaa\xd0\x3e\xbe\x4d\x67\x3f\xf2\xd2\x1d\x3f\x00\x00\x00\x00\x19\x90\x49\x3f\x2b\x89\x00\x3f\x20\x7f\x59\x3e\x88\x9c\x56\x3f\x6a\xdd\xb6\x3e\x76\xe2\xd2\x3e\x88\x9c\x56\x3f\xcb\x14\x43\x3e\x76\x19\x16\x3f\x19\x90\x49\x3f\x1d\x3d\x46\x3f\x00\x00\x00\x00\xca\xfa\x21\x3f\xb8\xe4\x30\x3f\xe2\xca\x59\x3e\xa9\xdc\x30\x3f\xf1\xb7\x11\x3f\xbe\xbd\xd3\x3e\x89\xea\x35\x3f\x86\xe4\xd4\x3e\x01\x69\x17\x3f\xa9\xdc\x30\x3f\x7d\x09\x75\x3e\x4c\x89\x3c\x3f\xca\xfa\x21\x3f\x2b\xf9\x64\x3f\x00\x00\x00\x00\x3c\xf9\xe4\x3e\xe9\x9c\x57\x3f\x54\xe3\x55\x3e\x64\x76\xfe\x3e\x49\xb9\x3f\x3f\x86\xaa\xd0\x3e\x59\xc3\x05\x3f\x03\x79\x1e\x3f\x76\x19\x16\x3f\x59\xc3\x05\x3f\x4d\xf7\xea\x3e\x4c\x89\x3c\x3f\x64\x76\xfe\x3e\x62\x83\x8d\x3e\x44\xc4\x59\x3f\x3c\xf9\xe4\x3e\xbf\xf1\x35\xbe\xb1\x30\x04\x3e\xdf\xbf\x79\x3f\xae\xb6\xe2\xbd\x5d\x70\xae\x3e\x82\x02\x6f\x3f\x91\x80\xb1\xbe\x8c\xf6\x80\x3e\xbe\x4d\x67\x3f\xb0\xe3\x3f\xbd\x13\x0c\x0b\x3f\x78\x9c\x56\x3f\x06\x0e\x90\xbe\xfd\x14\xef\x3e\x78\x9c\x56\x3f\x57\x5d\xff\xbe\x6e\x88\xb9\x3e\x19\x90\x49\x3f\xba\x4d\x38\x3c\xa6\x0f\x39\x3f\xa9\xdc\x30\x3f\x59\xa3\x5e\xbe\x6a\x4d\x2b\x3f\x89\xea\x35\x3f\x4c\x36\xde\xbe\x5b\x06\x14\x3f\xa9\xdc\x30\x3f\xee\x60\x20\xbf\x20\x0b\xe9\x3e\xca\xfa\x21\x3f\xea\x5d\x7c\x3d\x79\x95\x5d\x3f\x64\x76\xfe\x3e\x57\xec\x1f\xbe\xbc\x94\x56\x3f\x59\xc3\x05\x3f\x86\x90\xbb\xbe\x8b\x19\x45\x3f\x59\xc3\x05\x3f\x21\x01\x0f\xbf\x76\xfe\x29\x3f\x64\x76\xfe\x3e\x4f\x3e\x39\xbf\x4f\x96\x06\x3f\x3c\xf9\xe4\x3e\xbf\xf1\x35\xbe\xb1\x30\x04\xbe\xdf\xbf\x79\x3f\x72\x6a\xb7\xbe\x00\x00\x00\x00\x82\x02\x6f\x3f\x91\x80\xb1\xbe\x8c\xf6\x80\xbe\xbe\x4d\x67\x3f\xa1\xf2\x07\xbf\x6b\x7e\xfc\x3d\x78\x9c\x56\x3f\xa1\xf2\x07\xbf\xf1\x7e\xfc\xbd\x78\x9c\x56\x3f\x57\x5d\xff\xbe\x6e\x88\xb9\xbe\x19\x90\x49\x3f\x1d\x1d\x2f\xbf\xfa\xb3\x6f\x3e\xa9\xdc\x30\x3f\x36\x1e\x34\xbf\x00\x00\x00\x00\x89\xea\x35\x3f\x1d\x1d\x2f\xbf\x3e\xb4\x6f\xbe\xa9\xdc\x30\x3f\xdd\x60\x20\xbf\x20\x0b\xe9\xbe\xca\xfa\x21\x3f\x5d\xdd\x4d\xbf\xc7\xf2\xa6\x3e\x64\x76\xfe\x3e\xf4\x6e\x58\xbf\x0f\x48\xe2\x3d\x59\xc3\x05\x3f\xf4\x6e\x58\xbf\x0f\x48\xe2\xbd\x59\xc3\x05\x3f\x5d\xdd\x4d\xbf\xc7\xf2\xa6\xbe\x64\x76\xfe\x3e\x4f\x3e\x39\xbf\x4f\x96\x06\xbf\x3c\xf9\xe4\x3e\x61\xfe\x8a\x3d\x54\xe3\x55\xbe\xdf\xbf\x79\x3f\xae\xb6\xe2\xbd\x5d\x70\xae\xbe\x82\x02\x6f\x3f\xa2\x99\x07\x3e\x86\xaa\xd0\xbe\xbe\x4d\x67\x3f\x06\x0e\x90\xbe\xfd\x14\xef\xbe\x88\x9c\x56\x3f\xb0\xe3\x3f\xbd\x13\x0c\x0b\xbf\x88\x9c\x56\x3f\xcb\x14\x43\x3e\x76\x19\x16\xbf\x19\x90\x49\x3f\x4c\x36\xde\xbe\x5b\x06\x14\xbf\x98\xdc\x30\x3f\x59\xa3\x5e\xbe\x6a\x4d\x2b\xbf\x89\xea\x35\x3f\xba\x4d\x38\x3c\xa6\x0f\x39\xbf\x98\xdc\x30\x3f\x7d\x09\x75\x3e\x4c\x89\x3c\xbf\xca\xfa\x21\x3f\x21\x01\x0f\xbf\x76\xfe\x29\xbf\x64\x76\xfe\x3e\x86\x90\xbb\xbe\x8b\x19\x45\xbf\x59\xc3\x05\x3f\x57\xec\x1f\xbe\xbc\x94\x56\xbf\x59\xc3\x05\x3f\xf6\x5e\x7c\x3d\x79\x95\x5d\xbf\x64\x76\xfe\x3e\x62\x83\x8d\x3e\x44\xc4\x59\xbf\x3c\xf9\xe4\x3e\xe5\x62\x94\x3e\x5a\x9e\x57\xbe\x82\x02\x6f\x3f\x6a\xdd\xb6\x3e\x76\xe2\xd2\xbe\x78\x9c\x56\x3f\x2b\x89\x00\x3f\x20\x7f\x59\xbe\x78\x9c\x56\x3f\x86\xe4\xd4\x3e\x01\x69\x17\xbf\x98\xdc\x30\x3f\xf1\xb7\x11\x3f\xbe\xbd\xd3\xbe\x89\xea\x35\x3f\xb8\xe4\x30\x3f\xe2\xca\x59\xbe\x98\xdc\x30\x3f\x4d\xf7\xea\x3e\x4c\x89\x3c\xbf\x64\x76\xfe\x3e\x03\x79\x1e\x3f\x76\x19\x16\xbf\x59\xc3\x05\x3f\x49\xb9\x3f\x3f\x86\xaa\xd0\xbe\x59\xc3\x05\x3f\xe9\x9c\x57\x3f\x54\xe3\x55\xbe\x64\x76\xfe\x3e\x8c\xb9\x73\x3f\xb1\x30\x04\xbe\xd5\x03\x8e\x3e\x8c\xb9\x73\x3f\xb1\x30\x04\x3e\xd5\x03\x8e\x3e\x3a\x93\x76\x3f\x6a\xf6\x80\xbe\x42\x7c\xc0\x3d\x36\xca\x7e\x3f\x00\x00\x00\x00\x54\xe6\xc6\x3d\x29\x93\x76\x3f\x8c\xf6\x80\x3e\x42\x7c\xc0\x3d\x7c\x62\x6d\x3f\x6e\x88\xb9\xbe\x42\x7c\xc0\xbd\x7b\xc0\x7c\x3f\x6b\x7e\xfc\xbd\x8c\xf2\xcc\xbd\x7b\xc0\x7c\x3f\xf1\x7e\xfc\x3d\x8c\xf2\xcc\xbd\x7c\x62\x6d\x3f\x6e\x88\xb9\x3e\x42\x7c\xc0\xbd\x35\x9a\x58\x3f\x20\x0b\xe9\xbe\xd5\x03\x8e\xbe\xd8\x80\x6c\x3f\xfa\xb3\x6f\xbe\x13\x10\x9b\xbe\x0f\x43\x73\x3f\x00\x00\x00\x00\x80\x7e\x9f\xbe\xd8\x80\x6c\x3f\x3e\xb4\x6f\x3e\x13\x10\x9b\xbe\x35\x9a\x58\x3f\x20\x0b\xe9\x3e\xd5\x03\x8e\xbe\x4f\x3e\x39\x3f\x4f\x96\x06\xbf\x3c\xf9\xe4\xbe\x5d\xdd\x4d\x3f\xc7\xf2\xa6\xbe\x64\x76\xfe\xbe\xf4\x6e\x58\x3f\x0f\x48\xe2\xbd\x59\xc3\x05\xbf\xf4\x6e\x58\x3f\x0f\x48\xe2\x3d\x59\xc3\x05\xbf\x5d\xdd\x4d\x3f\xc7\xf2\xa6\x3e\x64\x76\xfe\xbe\x4f\x3e\x39\x3f\x4f\x96\x06\x3f\x3c\xf9\xe4\xbe\x9e\x7d\xd5\x3e\x79\x95\x5d\x3f\xd5\x03\x8e\x3e\x4c\x8a\x2f\x3e\x21\x02\x72\x3f\xd5\x03\x8e\x3e\x7b\x85\x09\x3f\xbc\x94\x56\x3f\x42\x7c\xc0\x3d\xfb\x77\x9d\x3e\xd2\x51\x72\x3f\x54\xe6\xc6\x3d\xa2\xec\x6d\x3d\xb9\x6e\x7e\x3f\x42\x7c\xc0\x3d\x03\x95\x21\x3f\x8b\x19\x45\x3f\x42\x7c\xc0\xbd\x64\x3e\xd8\x3e\xdc\xa0\x66\x3f\x8c\xf2\xcc\xbd\xa7\x59\x40\x3e\x70\x22\x7a\x3f\x8c\xf2\xcc\xbd\xa2\xec\x6d\xbd\xb9\x6e\x7e\x3f\x42\x7c\xc0\xbd\xa9\xc0\x31\x3f\x76\xfe\x29\x3f\xd5\x03\x8e\xbe\x90\x13\x02\x3f\xe4\x68\x4e\x3f\x13\x10\x9b\xbe\x1d\x58\x96\x3e\x1d\x5b\x67\x3f\x80\x7e\x9f\xbe\x99\xb9\x80\x3d\x2e\x72\x73\x3f\x13\x10\x9b\xbe\x4c\x8a\x2f\xbe\x21\x02\x72\x3f\xd5\x03\x8e\xbe\x21\x01\x0f\x3f\x76\xfe\x29\x3f\x64\x76\xfe\xbe\x86\x90\xbb\x3e\x8b\x19\x45\x3f\x59\xc3\x05\xbf\x57\xec\x1f\x3e\xbc\x94\x56\x3f\x59\xc3\x05\xbf\xea\x5d\x7c\xbd\x79\x95\x5d\x3f\x64\x76\xfe\xbe\x62\x83\x8d\xbe\x44\xc4\x59\x3f\x3c\xf9\xe4\xbe\xa9\xc0\x31\xbf\x76\xfe\x29\x3f\xd5\x03\x8e\x3e\x35\x9a\x58\xbf\x20\x0b\xe9\x3e\xd5\x03\x8e\x3e\x03\x95\x21\xbf\x8b\x19\x45\x3f\x42\x7c\xc0\x3d\x21\x21\x4e\xbf\x05\xc3\x15\x3f\x54\xe6\xc6\x3d\x7c\x62\x6d\xbf\x6e\x88\xb9\x3e\x42\x7c\xc0\x3d\x7b\x85\x09\xbf\xbc\x94\x56\x3f\x42\x7c\xc0\xbd\xd0\xed\x39\xbf\x11\x19\x2e\x3f\x8c\xf2\xcc\xbd\x46\x08\x5f\xbf\x3d\x0f\xf6\x3e\x8c\xf2\xcc\xbd\x3a\x93\x76\xbf\x6a\xf6\x80\x3e\x42\x7c\xc0\xbd\x9e\x7d\xd5\xbe\x79\x95\x5d\x3f\xd5\x03\x8e\xbe\x93\x1c\x1c\xbf\x80\x7e\x3b\x3f\x13\x10\x9b\xbe\x96\xcd\x44\xbf\x59\xfc\x0e\x3f\x80\x7e\x9f\xbe\x08\x8f\x62\xbf\x6f\x10\xb5\x3e\x13\x10\x9b\xbe\x8c\xb9\x73\xbf\xb1\x30\x04\x3e\xd5\x03\x8e\xbe\x4d\xf7\xea\xbe\x4c\x89\x3c\x3f\x64\x76\xfe\xbe\x03\x79\x1e\xbf\x76\x19\x16\x3f\x59\xc3\x05\xbf\x49\xb9\x3f\xbf\x86\xaa\xd0\x3e\x59\xc3\x05\xbf\xe9\x9c\x57\xbf\x54\xe3\x55\x3e\x64\x76\xfe\xbe\x2b\xf9\x64\xbf\x00\x00\x00\x00\x3c\xf9\xe4\xbe\x35\x9a\x58\xbf\x20\x0b\xe9\xbe\xd5\x03\x8e\x3e\xa9\xc0\x31\xbf\x76\xfe\x29\xbf\xd5\x03\x8e\x3e\x6b\x62\x6d\xbf\x6e\x88\xb9\xbe\x42\x7c\xc0\x3d\x21\x21\x4e\xbf\x05\xc3\x15\xbf\x54\xe6\xc6\x3d\x03\x95\x21\xbf\x8b\x19\x45\xbf\x42\x7c\xc0\x3d\x3a\x93\x76\xbf\x8c\xf6\x80\xbe\x42\x7c\xc0\xbd\x46\x08\x5f\xbf\x3d\x0f\xf6\xbe\x8c\xf2\xcc\xbd\xd0\xed\x39\xbf\x11\x19\x2e\xbf\x8c\xf2\xcc\xbd\x7b\x85\x09\xbf\xbc\x94\x56\xbf\x42\x7c\xc0\xbd\x8c\xb9\x73\xbf\xb1\x30\x04\xbe\xd5\x03\x8e\xbe\x08\x8f\x62\xbf\x6f\x10\xb5\xbe\x13\x10\x9b\xbe\x96\xcd\x44\xbf\x59\xfc\x0e\xbf\x80\x7e\x9f\xbe\x93\x1c\x1c\xbf\x80\x7e\x3b\xbf\x13\x10\x9b\xbe\x9e\x7d\xd5\xbe\x79\x95\x5d\xbf\xd5\x03\x8e\xbe\xe9\x9c\x57\xbf\x97\xe3\x55\xbe\x64\x76\xfe\xbe\x49\xb9\x3f\xbf\x86\xaa\xd0\xbe\x59\xc3\x05\xbf\x03\x79\x1e\xbf\x76\x19\x16\xbf\x59\xc3\x05\xbf\x4d\xf7\xea\xbe\x4c\x89\x3c\xbf\x64\x76\xfe\xbe\x62\x83\x8d\xbe\x44\xc4\x59\xbf\x3c\xf9\xe4\xbe\x4c\x8a\x2f\x3e\x21\x02\x72\xbf\xd5\x03\x8e\x3e\x9e\x7d\xd5\x3e\x79\x95\x5d\xbf\xd5\x03\x8e\x3e\xa2\xec\x6d\x3d\xb9\x6e\x7e\xbf\x42\x7c\xc0\x3d\xfb\x77\x9d\x3e\xd2\x51\x72\xbf\x54\xe6\xc6\x3d\x7b\x85\x09\x3f\xab\x94\x56\xbf\x42\x7c\xc0\x3d\xa2\xec\x6d\xbd\xb9\x6e\x7e\xbf\x42\x7c\xc0\xbd\xa7\x59\x40\x3e\x70\x22\x7a\xbf\x8c\xf2\xcc\xbd\x64\x3e\xd8\x3e\xcb\xa0\x66\xbf\x8c\xf2\xcc\xbd\x03\x95\x21\x3f\x7a\x19\x45\xbf\x42\x7c\xc0\xbd\x4c\x8a\x2f\xbe\x21\x02\x72\xbf\xd5\x03\x8e\xbe\x99\xb9\x80\x3d\x2e\x72\x73\xbf\x13\x10\x9b\xbe\x1d\x58\x96\x3e\x1d\x5b\x67\xbf\x80\x7e\x9f\xbe\x90\x13\x02\x3f\xe4\x68\x4e\xbf\x13\x10\x9b\xbe\xa9\xc0\x31\x3f\x76\xfe\x29\xbf\xd5\x03\x8e\xbe\xea\x5d\x7c\xbd\x79\x95\x5d\xbf\x64\x76\xfe\xbe\x57\xec\x1f\x3e\xbc\x94\x56\xbf\x59\xc3\x05\xbf\x86\x90\xbb\x3e\x8b\x19\x45\xbf\x59\xc3\x05\xbf\x21\x01\x0f\x3f\x76\xfe\x29\xbf\x64\x76\xfe\xbe\x21\x21\x4e\x3f\x05\xc3\x15\x3f\x54\xe6\xc6\xbd\xd0\xed\x39\x3f\x11\x19\x2e\x3f\x8c\xf2\xcc\x3d\x46\x08\x5f\x3f\x3d\x0f\xf6\x3e\x8c\xf2\xcc\x3d\x93\x1c\x1c\x3f\x80\x7e\x3b\x3f\x13\x10\x9b\x3e\x96\xcd\x44\x3f\x59\xfc\x0e\x3f\x80\x7e\x9f\x3e\x08\x8f\x62\x3f\x6f\x10\xb5\x3e\x13\x10\x9b\x3e\xfb\x77\x9d\xbe\xd2\x51\x72\x3f\x54\xe6\xc6\xbd\x64\x3e\xd8\xbe\xcb\xa0\x66\x3f\x8c\xf2\xcc\x3d\xa7\x59\x40\xbe\x70\x22\x7a\x3f\x8c\xf2\xcc\x3d\x90\x13\x02\xbf\xe4\x68\x4e\x3f\x13\x10\x9b\x3e\x1d\x58\x96\xbe\x1d\x5b\x67\x3f\x80\x7e\x9f\x3e\x99\xb9\x80\xbd\x2e\x72\x73\x3f\x13\x10\x9b\x3e\x36\xca\x7e\xbf\x00\x00\x00\x00\x54\xe6\xc6\xbd\x7b\xc0\x7c\xbf\xf1\x7e\xfc\xbd\x8c\xf2\xcc\x3d\x7b\xc0\x7c\xbf\x6b\x7e\xfc\x3d\x8c\xf2\xcc\x3d\xd8\x80\x6c\xbf\x3e\xb4\x6f\xbe\x13\x10\x9b\x3e\x0f\x43\x73\xbf\x00\x00\x00\x00\x80\x7e\x9f\x3e\xd8\x80\x6c\xbf\xfa\xb3\x6f\x3e\x13\x10\x9b\x3e\xfb\x77\x9d\xbe\xd2\x51\x72\xbf\x54\xe6\xc6\xbd\xa7\x59\x40\xbe\x70\x22\x7a\xbf\x8c\xf2\xcc\x3d\x64\x3e\xd8\xbe\xdc\xa0\x66\xbf\x8c\xf2\xcc\x3d\x99\xb9\x80\xbd\x2e\x72\x73\xbf\x13\x10\x9b\x3e\x1d\x58\x96\xbe\x1d\x5b\x67\xbf\x80\x7e\x9f\x3e\x90\x13\x02\xbf\xe4\x68\x4e\xbf\x13\x10\x9b\x3e\x21\x21\x4e\x3f\xf4\xc2\x15\xbf\x54\xe6\xc6\xbd\x46\x08\x5f\x3f\x3d\x0f\xf6\xbe\x8c\xf2\xcc\x3d\xd0\xed\x39\x3f\x11\x19\x2e\xbf\x8c\xf2\xcc\x3d\x08\x8f\x62\x3f\x6f\x10\xb5\xbe\x13\x10\x9b\x3e\x96\xcd\x44\x3f\x59\xfc\x0e\xbf\x80\x7e\x9f\x3e\x93\x1c\x1c\x3f\x80\x7e\x3b\xbf\x13\x10\x9b\x3e\x61\xfe\x8a\xbd\x54\xe3\x55\x3e\xdf\xbf\x79\xbf\xbf\xf1\x35\x3e\xb1\x30\x04\x3e\xdf\xbf\x79\xbf\x5f\x99\x07\xbe\x86\xaa\xd0\x3e\xbe\x4d\x67\xbf\xae\xb6\xe2\x3d\x5d\x70\xae\x3e\x82\x02\x6f\xbf\x91\x80\xb1\x3e\x8c\xf6\x80\x3e\xbe\x4d\x67\xbf\xcb\x14\x43\xbe\x76\x19\x16\x3f\x19\x90\x49\xbf\xb0\xe3\x3f\x3d\x13\x0c\x0b\x3f\x88\x9c\x56\xbf\x06\x0e\x90\x3e\xfd\x14\xef\x3e\x88\x9c\x56\xbf\x57\x5d\xff\x3e\x6e\x88\xb9\x3e\x19\x90\x49\xbf\x7d\x09\x75\xbe\x4c\x89\x3c\x3f\xca\xfa\x21\xbf\xba\x4d\x38\xbc\xa6\x0f\x39\x3f\xa9\xdc\x30\xbf\x59\xa3\x5e\x3e\x6a\x4d\x2b\x3f\x89\xea\x35\xbf\x4c\x36\xde\x3e\x5b\x06\x14\x3f\xa9\xdc\x30\xbf\xee\x60\x20\x3f\x20\x0b\xe9\x3e\xca\xfa\x21\xbf\x60\xe5\x60\xbe\x00\x00\x00\x00\xdf\xbf\x79\xbf\xa1\x67\xdb\xbe\x00\x00\x00\x00\xbe\x4d\x67\xbf\xe5\x62\x94\xbe\x5a\x9e\x57\x3e\x82\x02\x6f\xbf\xf2\xd2\x1d\xbf\x00\x00\x00\x00\x19\x90\x49\xbf\x2b\x89\x00\xbf\x20\x7f\x59\x3e\x88\x9c\x56\xbf\x6a\xdd\xb6\xbe\x76\xe2\xd2\x3e\x88\x9c\x56\xbf\x1d\x3d\x46\xbf\x00\x00\x00\x00\xca\xfa\x21\xbf\xb8\xe4\x30\xbf\xe2\xca\x59\x3e\xa9\xdc\x30\xbf\xf1\xb7\x11\xbf\xbe\xbd\xd3\x3e\x89\xea\x35\xbf\x86\xe4\xd4\xbe\x01\x69\x17\x3f\xa9\xdc\x30\xbf\x61\xfe\x8a\xbd\x54\xe3\x55\xbe\xdf\xbf\x79\xbf\x5f\x99\x07\xbe\x86\xaa\xd0\xbe\xbe\x4d\x67\xbf\xe5\x62\x94\xbe\x5a\x9e\x57\xbe\x82\x02\x6f\xbf\xcb\x14\x43\xbe\x76\x19\x16\xbf\x19\x90\x49\xbf\x6a\xdd\xb6\xbe\x76\xe2\xd2\xbe\x78\x9c\x56\xbf\x2b\x89\x00\xbf\x20\x7f\x59\xbe\x78\x9c\x56\xbf\x7d\x09\x75\xbe\x4c\x89\x3c\xbf\xca\xfa\x21\xbf\x86\xe4\xd4\xbe\x01\x69\x17\xbf\xa9\xdc\x30\xbf\xf1\xb7\x11\xbf\xe0\xbd\xd3\xbe\x89\xea\x35\xbf\xb8\xe4\x30\xbf\xe2\xca\x59\xbe\xa9\xdc\x30\xbf\xbf\xf1\x35\x3e\xb1\x30\x04\xbe\xdf\xbf\x79\xbf\x91\x80\xb1\x3e\x6a\xf6\x80\xbe\xbe\x4d\x67\xbf\xae\xb6\xe2\x3d\x5d\x70\xae\xbe\x82\x02\x6f\xbf\x57\x5d\xff\x3e\x6e\x88\xb9\xbe\x19\x90\x49\xbf\x06\x0e\x90\x3e\xfd\x14\xef\xbe\x78\x9c\x56\xbf\xb0\xe3\x3f\x3d\x13\x0c\x0b\xbf\x78\x9c\x56\xbf\xee\x60\x20\x3f\x20\x0b\xe9\xbe\xca\xfa\x21\xbf\x4c\x36\xde\x3e\x5b\x06\x14\xbf\x98\xdc\x30\xbf\x59\xa3\x5e\x3e\x6a\x4d\x2b\xbf\x89\xea\x35\xbf\xba\x4d\x38\xbc\xa6\x0f\x39\xbf\x98\xdc\x30\xbf\x72\x6a\xb7\x3e\x00\x00\x00\x00\x82\x02\x6f\xbf\xa1\xf2\x07\x3f\xf1\x7e\xfc\x3d\x78\x9c\x56\xbf\xb2\xf2\x07\x3f\x6b\x7e\xfc\xbd\x78\x9c\x56\xbf\x1d\x1d\x2f\x3f\x3e\xb4\x6f\x3e\x98\xdc\x30\xbf\x36\x1e\x34\x3f\x00\x00\x00\x00\x89\xea\x35\xbf\x1d\x1d\x2f\x3f\xfa\xb3\x6f\xbe\x98\xdc\x30\xbf'
 
@@ -285,6 +362,7 @@ class Parser:
 	"""
 
 	def stufftext(self,buf,conn):
+
 		b = buf.tobytes().decode('ISO 8859-1')
 		b = b.split("\n")
 		# return only 'cmd' stufftexts but remove cmd from front
@@ -295,19 +373,14 @@ class Parser:
 			if a and a.find("cmd ",0) < 0:
 				if a.find("precache ",0) == 0:
 					conn.bot.precache = a[9:]
-					conn.send(True,"\x04download maps/dm/{}.eal\x00".format(conn.bot.mapname).encode('ISO 8859-1'));
+					conn.send(True,"\x04download {}.eal\x00".format(conn.bot.mapname).encode('ISO 8859-1'));
 					conn.i_downloading = 1
 					print("SERVED BY PRECACHE STUFFTEXT\n")
 				elif a.find("reconnect",0) == 0:
 					print("They want you to reconnect by stufftext\n");
-					# conn.connected = False
-					# conn.bot.lastServerFrame = -1
-					# conn.get_challenge()
-					# conn.connect()
-					# conn.out_seq = 0
-					# conn.in_seq = 0
-					# conn.reliable_s = 1
-					conn.new()
+					global init
+					init = False
+
 					
 		return retlist
 
@@ -324,6 +397,7 @@ class Connection:
 		self.connected = False
 		self.expectmapname = False
 		self.i_downloading = 0
+		self.last_packet_stamp = 0
 		
 	def rand(self,len):
 		rand = []
@@ -416,7 +490,7 @@ class Connection:
 
 
 	def recv(self):
-		global last_packet_stamp
+		global answer, chunks
 		while True:
 			msg = bytearray(1400)
 			view = memoryview(msg)
@@ -428,7 +502,7 @@ class Connection:
 					return False
 				print("Network Error")
 				sys.exit(1)
-			last_packet_stamp = time.time()
+			conn.last_packet_stamp = time.time()
 			view = view[:nbytes]
 
 			# print("received {} : ".format(nbytes),":".join("{0:x}".format(ord(c)) for c in bytes(view).decode('ISO 8859-1')),"\n")
@@ -496,6 +570,7 @@ class Connection:
 			# there are many commands inside 1 packet
 			# if you cannot parse 1 packet, you can't parse the others.
 			while view:
+				global init
 				# print(view.nbytes)
 				cmd = struct.unpack_from('<B',view,0)[0]
 				# print(f"---------PARSING PACKET : {packetIDtoName(cmd)}")
@@ -505,29 +580,18 @@ class Connection:
 					pass		
 				if cmd == PACKET_SVC.SVC_DISCONNECT: #disconnect
 					print("PACKET: disconnect\n")
-					conn.connected = False
-					conn.bot.lastServerFrame = -1
-					conn.get_challenge()
-					conn.connect()
-					conn.out_seq = 0
-					conn.in_seq = 0
-					conn.reliable_s = 1
-					conn.new()
+					init = False
 				elif cmd == PACKET_SVC.SVC_PRINT: #print
 					view=view[1:]
 					s,view = self.pars.string(view)
 					if s.tobytes().decode(('ISO 8859-1')) == "Server restarted\n":
 						print("Server restart detected via print\n");
-						conn.connected = False
-						conn.bot.lastServerFrame = -1
-						conn.get_challenge()
-						conn.connect()
-						conn.out_seq = 0
-						conn.in_seq = 0
-						conn.reliable_s = 1
-						conn.new()
+						init = False
 					print("PACKET: print\n",s.tobytes(),s.tobytes().decode('ISO 8859-1'))
+
 				elif cmd == PACKET_SVC.SVC_NAMEPRINT:
+					break
+					global buttonsPressed, moveForward,moveBack, moveLeft,moveRight
 					# 2 bytes and a string, 2nd byte = teamsay
 					data1 = struct.unpack_from('<B',view,0)[0]
 					view=view[1:]
@@ -540,13 +604,45 @@ class Connection:
 					print(f"client {data1} says : {s}")
 
 					s = s.split(']')[1].strip()
-					if s.startswith("@sofgpt"):
-						print(s)
-						answer = gtp_ask(s,heartbeat)
+					if s.find("@sofgpt ") == 0:
+						s = s[8:]
+						if s == "stop":
+							chunks = []
+						elif s == "+attack":
+							buttonsPressed |= BUTTON_ATTACK
+						elif s == "-attack":
+							buttonsPressed &= ~BUTTON_ATTACK
+						elif s == "+altattack":
+							buttonsPressed |= BUTTON_ALTATTACK
+						elif s == "-altattack":
+							buttonsPressed &= ~BUTTON_ALTATTACK
+						elif s == "+use":
+							buttonsPressed |= BUTTON_ACTION
+						elif s == "-use":
+							buttonsPressed &= ~BUTTON_ACTION
+						elif s == "+forward":
+							moveForward = True
+						elif s == "-forward":
+							moveForward = False
+						elif s == "+back":
+							moveBack = True
+						elif s == "-back":
+							moveBack = False
+						elif s == "+moveright":
+							moveRight = True
+						elif s == "-moveright":
+							moveRight = False
+						elif s == "+moveleft":
+							moveLeft = True
+						elif s == "-moveleft":
+							moveLeft = False
+						elif not len(chunks):
+							print(s)
+							answer = gtp_ask(s,heartbeat)
 
-						print(answer)
-						self.send(True,(f"\x04say {answer}\x00").encode('ISO 8859-1'))
-					
+							generate_chunks_gpt()
+							print(answer)
+
 				elif cmd == PACKET_SVC.SVC_STUFFTEXT: #stufftext	
 					s,view = self.pars.string(view)
 					print("PACKET: stufftext\n",s.tobytes(),s.tobytes().decode('ISO 8859-1'))
@@ -560,7 +656,7 @@ class Connection:
 							self.connected = True
 							self.bot.init_timer()
 							# send it back to server
-							self.send(True,("\x04"+f"begin {self.bot.precache}"+"\x00").encode('ISO 8859-1'))
+							self.send(True,(f"\x04begin {self.bot.precache}\x00").encode('ISO 8859-1'))
 
 						elif a.find(".check",0) == 0:
 							
@@ -578,18 +674,18 @@ class Connection:
 							a = a.replace("#gl_dlightintensity","2")
 							a = a.replace("#gl_nobind","0")
 							a = a.replace("#r_nearclipdist","4")
-							a = a.replace("#r_drawworld","1	")
+							a = a.replace("#r_drawworld","1")
 							a = a.replace("#r_fullbright","0")
 
 							a = a.replace("#ghl_shadow_dist","25")
 							a = a.replace("#cl_testlights","0")
 							a = a.replace("#cl_testblend","0")
 							# send it back to server
-							self.send(True,("\x04"+a+"\x00").encode('ISO 8859-1'))
+							self.send(True,(f"\x04{a}\x00").encode('ISO 8859-1'))
 						else:
 							# send it back to server
-							self.send(True,("\x04"+a+"\x00").encode('ISO 8859-1'))
-						
+							self.send(True,(f"\x04{a}\x00").encode('ISO 8859-1'))
+					
 				elif cmd == PACKET_SVC.SVC_SERVERDATA: #serverdata
 					print("PACKET: serverdata\n")
 					self.expectmapname = True
@@ -615,13 +711,13 @@ class Connection:
 					if find_precache >= 0:
 						self.bot.precache = int(data[find_precache+9:].split(b'\x0a',1)[0])
 						print(f"acquired precache number : {self.bot.precache}\n")
-						print (f"download {self.bot.mapname}.eal")
-						self.send(True,("\x04"+f"download {self.bot.mapname}.eal"+"\x00").encode('ISO 8859-1'))
+						print (f"download  {self.bot.mapname}.eal")
+						self.send(True,(f"\x04download {self.bot.mapname}.eal\x00").encode('ISO 8859-1'))
 						self.i_downloading = 1
 						print("SERVED BY BASELINE\n")
 					else:
 						print("failed getting precache\n")
-					break;
+					break
 					tmp2 = 0
 					tmp = struct.unpack_from('<b',view,0)[0]
 					view=view[1:]
@@ -684,13 +780,13 @@ class Connection:
 					view=view[3:]
 
 					if  self.i_downloading == 1:
-						self.send(True,("\x04"+f"download maps/dm/{self.bot.mapname}.sp"+"\x00").encode('ISO 8859-1'))
+						self.send(True,(f"\x04download {self.bot.mapname}.sp\x00").encode('ISO 8859-1'))
 						self.i_downloading += 1
 					elif self.i_downloading == 2:
-						self.send(True,("\x04"+f"download maps/dm/{self.bot.mapname}.wrs"+"\x00").encode('ISO 8859-1'))
+						self.send(True,(f"\x04download {self.bot.mapname}.wrs\x00").encode('ISO 8859-1'))
 						self.i_downloading += 1
 					elif self.i_downloading == 3:
-						self.send(True,("\x04"+f"sv_precache {self.bot.precache}"+"\x00").encode('ISO 8859-1'))
+						self.send(True,(f"\x04sv_precache {self.bot.precache}\x00").encode('ISO 8859-1'))
 						self.i_downloading = 0;
 
 				elif cmd == PACKET_SVC.SVC_FRAME: #frame
@@ -914,24 +1010,31 @@ class Connection:
 					break
 					pass
 				else:
-					print(f"PACKET: {packetIDtoName(cmd)} \n")
+					# print(f"PACKET: {packetIDtoName(cmd)} \n")
 					# fetch new packet ( SKIPS LOTS OF DATA )
 					break
 
-			# endwhile
+			# endwhile view
+			# entire msg search
 			if self.expectmapname:
 				# print("FINDING MAP NAME")
 				# "maps/dm/"
-
 				pos = msg.find(b"maps/dm/",0)
 				if pos >= 0:
 					self.bot.mapname = msg[pos:].split(b'.',1)[0].decode("ISO 8859-1")
 					print (self.bot.mapname)
 					self.expectmapname = False
+			break
 		return True
 			
 	def end(self):
 		self.s.close
+
+	def createUserCmds(self):
+		global uc_now,  uc_prev ,uc_prev_prev
+		uc_now = UserCmd()
+		uc_prev = copy.copy(uc_now)
+		uc_prev_prev = copy.copy(uc_now)
 
 PS_M_TYPE = (1<<0)
 PS_M_ORIGIN = (1<<1)
@@ -1014,53 +1117,86 @@ yaw = 2047;
 roll = 0;
 pitch = 2048; # 0 = look flat //  2047 = down_max // 2048 = up_max
 
+
+# one = (1).to_bytes(1,byteorder="big")
 one = bytes((1,))
+# zero = (0).to_bytes(1,byteorder="big")
 zero = bytes((0,))
 
-lookup = True
-lookdown = False
-right = True
-left = False
-back = False
-forward = False
-moveup = False
-movedown = False
-leanleft = False
-leanright = False
-shoot = False
-moveleft = False
-moveright = False
-def oneDeltaUsercmd(ba_buf, mode):
+
+
+
+# Creates a byte that represents the changed fields using bit operations
+# For each bit that is set, it has a corresponding data
+# [1]
+# 12/1
+# [1]
+# 12/1
+# [1]
+# 12/1
+
+# [1]
+# 10/1
+# [1]
+# 10/1
+# [1]
+# 10/1
+
+# [1]
+# 8/1
+
+# [1]
+# 1
+
+# [1]
+# 5/1
+
+# [1]
+# 32/1
+# [1]
+# 32/1
+# REMEMBER ITS DELTA!!!! THE CHANGE!!
+
+def oneDeltaUsercmd(ba_buf,state):
 	global yaw,roll,pitch
-	buttons = bytes((BUTTON_ATTACK,))
+
+	delta_pitch = 0
+
 	d = bytearray(4)
 	# PITCH_ANGLE -2047 -> 2047 AKA 0 -> 4095
 	# 
 	# **************************PITCH*********************************
 	# 
-	if lookup:
+	# if state.lookUp:
+	# 	# make negative
+	# 	delta_pitch *= -1
+	# 	pitch += delta_pitch;
+	# 	if pitch < 0 :
+	# 		pitch = pitch + 4096
+	# elif state.lookDown:
+	# 	pitch += 1;
+	# 	if pitch == 4096:
+	# 		pitch = 0
+	if state.lookUp:
 		pitch -= 1;
 		if pitch == -1:
 			pitch = 4095
-	elif lookdown:
+	elif state.lookDown:
 		pitch += 1;
 		if pitch == 4096:
 			pitch = 0
 	dataToBits(ba_buf,one,1)
-
-	
 	struct.pack_into('<H',d,0,pitch)
 	dataToBits(ba_buf,d,12)
 
-	
 	# /*
 	# **************************YAW*********************************
 	# */
-	if right:
+	if state.right:
 		yaw -= 1;
 		if yaw == -1:
 			yaw = 4095
-	elif left:
+	elif state.left:
 		yaw += 1;
 		if yaw == 4096:
 			yaw = 0
@@ -1073,21 +1209,18 @@ def oneDeltaUsercmd(ba_buf, mode):
 	# **************************ROLL*********************************
 	# */
 	# ROLL_ANGLE  -2047 -> 2047 AKA 0 -> 4095
-	# dataToBits(buf,&zero,1);
 	dataToBits(ba_buf,one,1)
 	struct.pack_into('<H',d,0,roll)
 	dataToBits(ba_buf,d,12)
 
-
 	# 
 	# **************************FORWARDMOVE*********************************
 	# 
-	if back:
-		
+	if state.moveBack:
 		dataToBits(ba_buf,one,1)
 		struct.pack_into('<H',d,0,tenbit(100))
 		dataToBits(ba_buf,d,10)
-	elif forward:
+	elif state.moveForward:
 		dataToBits(ba_buf,one,1)
 		struct.pack_into('<H',d,0,tenbit(-100))
 		dataToBits(ba_buf,d,10)
@@ -1097,26 +1230,30 @@ def oneDeltaUsercmd(ba_buf, mode):
 	# /*
 	# **************************SIDEMOVE*********************************
 	# */
-	if moveleft:
+	if state.moveLeft:
+		# optional
 		dataToBits(ba_buf,one,1)
 		struct.pack_into('<H',d,0,tenbit(-100))
+		# non-optional
 		dataToBits(ba_buf,d,10)
-	elif moveright:
+	elif state.moveRight:
+		# optional
 		dataToBits(ba_buf,one,1)
 		struct.pack_into('<H',d,0,tenbit(100))
+		# non-optional
 		dataToBits(ba_buf,d,10)
 	else:
+		# non-optional
 		dataToBits(ba_buf,zero,1)
 
 	# /*
 	# **************************UPMOVE*********************************
 	# */
-
-	if moveup:
+	if state.moveUp:
 		dataToBits(ba_buf,one,1)
 		struct.pack_into('<H',d,0,tenbit(100))
 		dataToBits(ba_buf,d,10)
-	elif movedown:
+	elif state.moveDown:
 		dataToBits(ba_buf,one,1)
 		struct.pack_into('<H',d,0,tenbit(-100))
 		dataToBits(ba_buf,d,10)
@@ -1126,81 +1263,83 @@ def oneDeltaUsercmd(ba_buf, mode):
 		struct.pack_into('<H',d,0,tenbit(0))
 		dataToBits(ba_buf,d,10)
 
-	# 
-	# **************************BUTTONS*********************************
-	# */
-	# toggle shoot useful for respawning after death
-	if mode:
-		# print("ZERObefore is " + "".join("\\x{0:02x}".format(x) for x in ba_buf))
-		dataToBits(ba_buf,zero,1)
-		# print("ZEROafter is " + "".join("\\x{0:02x}".format(x) for x in ba_buf))
-	else:
-		# print("ONEBUTTONSbefore is " + "".join("\\x{0:02x}".format(x) for x in ba_buf))
-		dataToBits(ba_buf,one,1)
-		dataToBits(ba_buf,buttons,8)
-		# print("ONEBUTTONSafter is " + "".join("\\x{0:02x}".format(x) for x in ba_buf))
 
-	# /*
-	# **************************LEAN*********************************
-	# */
-	
-	if leanleft:
+	if state.mode:
+		dataToBits(ba_buf,zero,1)
+		# state.buttonsPressed &= ~BUTTON_ATTACK
+
+	else:
+		state.buttonsPressed |= BUTTON_ATTACK
+		dataToBits(ba_buf,one,1)
+		b = bytes((state.buttonsPressed,))
+		dataToBits(ba_buf,b,8)
+
+	if state.leanLeft:
 		dataToBits(ba_buf,one,1)
 		dataToBits(ba_buf,zero,1)
-	elif leanright:
+	elif state.leanRight:
 		dataToBits(ba_buf,one,1)
 		dataToBits(ba_buf,one,1)
 	else:
 		# careful of leaning on respawn bug?
 		dataToBits(ba_buf,zero,1)
 	
+
 	# /*
 	# **************************LIGHTLEVEL*********************************
 	# */
 	# lightlevel - used for visibility a.i of computer to target you?
-	# dataToBits(buf,&zero,1);
 	dataToBits(ba_buf,one,1)
-	lightLevel = bytes((5,))
-	dataToBits(ba_buf,lightLevel,5)
+	state.lightLevel = 5
+	b = bytes((state.lightLevel,))
+	dataToBits(ba_buf,b,5)
 
-	# /*
-	# **************************MSEC*********************************
-	# */
-	msec = bytes((20,))
-	dataToBits(ba_buf,msec,8)
-	# /*
-	# **************************FIREVENT*********************************
-	# */
-	dataToBits(ba_buf,zero,1)
-	# /*
-	# **************************ALTFIREEVENT*********************************
-	# */
-	dataToBits(ba_buf,zero,1)
+	# MSEC IS UNIQUE, NO TICK FOR IT FORCED.
+	b = bytes((state.msec,))
+	dataToBits(ba_buf,b,8)
+
+	if state.fireEvent:
+		dataToBits(ba_buf,one,1)
+		struct.pack_into('<I',d,0,0)
+		dataToBits(ba_buf,d,32)
+	else:
+		dataToBits(ba_buf,zero,1)
+
+	if state.altFireEvent:
+		dataToBits(ba_buf,one,1)
+		struct.pack_into('<I',d,0,0)
+		dataToBits(ba_buf,d,32)
+	else:
+		dataToBits(ba_buf,zero,1)
 
 
 def tenbit(n):
 	n = n * 0.01 * 510
 	return int(n) + 510
 
-def completeUserCommandBitBuffer(mode):
+def completeUserCommandBitBuffer():
 	global bitpos
 	usercmd = bytearray(64)
-	oneDeltaUsercmd(usercmd,mode)
-	oneDeltaUsercmd(usercmd,mode)
-	oneDeltaUsercmd(usercmd,mode)
+	
+
+	# oneDeltaUsercmd2(usercmd,uc_now.mode)
+	# oneDeltaUsercmd2(usercmd,uc_now.mode)
+	# oneDeltaUsercmd2(usercmd,uc_now.mode)
+
+	oneDeltaUsercmd(usercmd,uc_prev_prev)
+	oneDeltaUsercmd(usercmd,uc_prev)
+	oneDeltaUsercmd(usercmd,uc_now)
+	# // send this and the previous cmds in the message, so
+	# // if the last packet was dropped, it can be recovered
 
 	bytesWritten = int(bitpos/8)
 	bitpos = 0
 	
-	# for ( int i = 0 ; i < bytesWritten; i++ )
-	# {
-	# printf("byte %i :: %02X\n",i,*(unsigned char*)(fillme+i));
-	# }
-	# printf("\n");
+	
 	return (bytesWritten,usercmd)
 
 
-mode = False
+
 # Refer to Cl_SendCmd
 # MSG_WriteDeltaUsercmd
 # move_command
@@ -1211,17 +1350,17 @@ mode = False
 # msec (byte)
 # lightlevel (byte)
 def heartbeat():
-	global mode
+	global uc_now,  uc_prev ,uc_prev_prev
+
 	buffer2 = bytearray.fromhex('02 00 FF FF FF FF')
 	
-
 	# fill the 'buffer'
-	written_bytes,written_buffer = completeUserCommandBitBuffer(mode);
+	written_bytes,written_buffer = completeUserCommandBitBuffer();
 	# print(f"Wrote {written_bytes}\n")
 
 	buffer2 += written_buffer[:written_bytes]
 
-	mode = not mode;
+	uc_now.mode = not uc_now.mode
 
 
 	# update lastServerFrame
@@ -1246,17 +1385,12 @@ def heartbeat():
 	blossom = COM_BlockSequenceCRCByte(buffer2[2:],conn.out_seq+1);
 	# print(f'blossom is {blossom}\n')
 	buffer2[1] = blossom
-	# printf("%i\n",out_seq+1);
-	# for (int i= 0; i < usercmdSize; i ++ ) {
-	# printf("%02X ",(unsigned char)tmp_buf[6+i]);
-	# }
-	# printf("\n");
-	
-	# increases out_seq
 
 	# print(f'sending {buffer2}\n')
 	conn.send(True,buffer2);
 
+	uc_prev = copy.copy(uc_now)
+	uc_prev_prev = copy.copy(uc_prev)
 
 # ------------------------------------BEGIN-----------------------------------------
 # chktbl2_view = memoryview(chktbl2)
@@ -1267,26 +1401,30 @@ name = sys.argv[3]
 print(f"ip : {ip}\nport : {port}\nname : {name}")
 # sys.exit(0)
 
-bot = Bot(name)
-conn = Connection(ip,port,bot)
-					
-conn.get_challenge()
-conn.connect()
-conn.out_seq = 0
-conn.in_seq = 0
-conn.reliable_s = 1
-conn.new()
-# Return the time in seconds since the epoch as a floating point number.
-begintime = time.time()
-
-
-# 0.02 of a second = 20ms = 50fps
-frame_length = 0.02
-framecount = 0
-second_timer = before_cpu = time.time()
-
 init = False
+was_connected = False
 while 1:
+	if not init:
+		init = True
+		bot = Bot(name)
+		conn = Connection(ip,port,bot)
+							
+		conn.get_challenge()
+		conn.connect()
+		conn.out_seq = 0
+		conn.in_seq = 0
+		conn.reliable_s = 1
+		conn.new()
+		# Return the time in seconds since the epoch as a floating point number.
+		begintime = time.time()
+
+
+		# 0.02 of a second = 20ms = 50fps
+		frame_length = 0.02
+		framecount = 0
+		second_timer = before_cpu = time.time()
+		conn.createUserCmds()
+
 	framecount += 1
 	conn.recv()
 	
@@ -1294,28 +1432,31 @@ while 1:
 
 	# sends heartbeat 50 times a second
 	if conn.connected:
-		if not init:
-			init = True
-			conn.send(True,(f"\x04say Hi interact with me using @sofgpt\x00").encode('ISO 8859-1'))
-		# print('heartbeat!\n')
+		if not was_connected:
+			pass
+			# time.sleep(0.5)
+			# 150 visible characters
+			# conn.send(True,(f"\x04say Hi interact with me using @sofgpt\x00").encode('ISO 8859-1'))
+
+			# conn.send(True,(f"\x04say Hi!\x00").encode('ISO 8859-1'))
+		
+		# send usercmds once connected
 		heartbeat()
 
+	# send gpt output
+	output_gpt(conn)
 
 	# if a second has passed
 	if time.time() - second_timer >= 1.0:
 		# print(f"fps is {framecount}")
-		if last_packet_stamp < second_timer:
-			conn.connected = False
-			conn.bot.lastServerFrame = -1
-			conn.get_challenge()
-			conn.connect()
-			conn.out_seq = 0
-			conn.in_seq = 0
-			conn.reliable_s = 1
-			conn.new()
 
 		framecount = 0
 		second_timer = time.time()
+
+	# if time.time() - conn.last_packet_stamp > 5.0:
+	# 	print("SHOULD RECONNECT HERE!")
+	# 	conn.last_packet_stamp = time.time()
+
 
 	# seconds for this frame
 	exec_time = time.time() - before_cpu
@@ -1324,5 +1465,6 @@ while 1:
 		# sleep please
 		time.sleep(frame_length-exec_time)
 
+	was_connected = conn.connected
 	before_cpu = time.time()
 conn.end()
