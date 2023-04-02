@@ -19,7 +19,6 @@ import os
 import sys
 import time
 
-
 def contact(question,keep_alive_func=None):
 	# Start a webdriver instance and open ChatGPT
 	options = webdriver.ChromeOptions()
@@ -39,12 +38,7 @@ def contact(question,keep_alive_func=None):
 	# 		fix_hairline=True,
 	# 		)
 
-
-	driver.implicitly_wait(2)
-
-	# Find the input field and send a question
-	#input_field = driver.find_element_by_class_name('c-text-input')
-	print("BEGIN")
+	driver.implicitly_wait(1)
 
 	# timeout is set to 2 seconds if can't find element
 	before = time.time()
@@ -63,32 +57,34 @@ def contact(question,keep_alive_func=None):
 			driver.quit()
 			return ""
 
-	print("INPUT_FIELD-------------")
-	print(input_field)
 	input_field.send_keys(question)
 	input_field.send_keys(Keys.RETURN)
 
-
-	print("Waiting...")
 	before = time.time()
+	previous_length = 0
 	while True:
 		
 		# timeout is set to 2 seconds if can't find element
 		# element exists but is unfinished(grows)
 		try:
-			response = driver.find_element(By.CSS_SELECTOR,".prose").text
-			# we didn't except, so therefore we have a response.
-			if "BANANA" in response:
-				print("Found BANANA")
-				break
+			response = driver.find_element(By.CSS_SELECTOR,".prose")
 
 			# wait for it to grow to full size.
 			time.sleep(1)
+
+			if not (len(response.text) > previous_length):
+				# output has not grown
+				print("----Think Output has ended----")
+				response = response.text
+				break
+
+			previous_length = len(response.text)
+
 			if keep_alive_func:
 				keep_alive_func()
 
 			if time.time() - before > 30:
-				print("Graceful exit, did not find element")
+				print("----Graceful exit, did not find element----")
 				driver.quit()
 				return ""
 		except:
@@ -100,11 +96,29 @@ def contact(question,keep_alive_func=None):
 
 	print(response)
 
+	try:
+		clear = driver.find_element(By.CSS_SELECTOR,"nav>a:nth-child(3)")
+		clear.click()
+		# print("----clicked once----")
+		time.sleep(0.25)
+		try:
+			clear = driver.find_element(By.CSS_SELECTOR,"nav>a:nth-child(3)")
+			clear.click()
+			# print("---clicked twice----")
+		except:
+			print("----inner cannot find that nav----")
+			
+	except:
+		print("----canot find that nav----")
+		
+
+
+
 	# Close the webdriver instance
 	driver.quit()
 	return response
 
-def runVersion():
+def runVersion(keep_alive_func):
 	if len(sys.argv) <= 1:
 		print("give more")
 		sys.exit(1)
@@ -116,15 +130,14 @@ def runVersion():
 
 	question = question + ".  Finish your response with the word `BANANA`."
 
-	contact(question)
+	contact(question,keep_alive_func)
 
-def libVersion(question, stay_alive):
-	question = question + ".  Finish your response with the word `BANANA`."
-	response = contact(question,stay_alive)
+# gpt_ask
+def libVersion(question, keep_alive):
+	response = contact(question,keep_alive)
 	if len(response) == 0:
 		return "Tears. Something went wrong."
 	
-	response = response.split("BANANA")[0]
 	return response
 
 

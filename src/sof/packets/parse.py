@@ -1,10 +1,9 @@
-from gpt.ask_question import libVersion as gpt_ask
-
 import sof.gpt_bridge as GPT
 
 from sof.packets.defines import *
 
 import struct
+import time
 
 class Parser:
 	"""
@@ -45,9 +44,10 @@ class Parser:
 					conn.i_downloading = 1
 					# print("SERVED BY PRECACHE STUFFTEXT\n")
 				elif a.find("reconnect",0) == 0:
-					print("They want you to reconnect by stufftext\n");
-					
-					player.init = False
+					print("They want you to reconnect by stufftext\n")
+					conn.connected = False
+					conn.new()
+					# player.init = False
 
 					
 		return retlist
@@ -110,8 +110,11 @@ def svc_nameprint(conn,player,view):
 
     print(f"client {data1} says : {s}")
 
-    s = s.split(']')[1].strip()
+    pos = s.find(']')
+    if not pos == -1:
+    	s = s[pos+1:]
 
+    s = s.strip()
 
     if s.find("@sofgpt ") == 0:
     	s = s[8:]

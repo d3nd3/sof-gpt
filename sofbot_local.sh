@@ -1,2 +1,2 @@
 #!/bin/bash
-xvfb-run python3 sofbot.py 192.168.0.12 8080 sofgpt
+xvfb-run python3 src/main.py 192.168.0.12 8080 sofgpt

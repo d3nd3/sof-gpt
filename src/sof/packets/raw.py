@@ -92,72 +92,86 @@ def tenbit(n):
 	return int(n) + 510
 
 
-def oneDeltaUsercmd(ba_buf,state):
-	global yaw,roll,pitch
+def oneDeltaUsercmd(player,ba_buf,state):
 
-	delta_pitch = 0
+	
 
 	d = bytearray(4)
 	# PITCH_ANGLE -2047 -> 2047 AKA 0 -> 4095
 	# 
 	# **************************PITCH*********************************
 	# 
-	# if state.lookUp:
-	# 	# make negative
-	# 	delta_pitch *= -1
-	# 	pitch += delta_pitch;
-	# 	if pitch < 0 :
-	# 		pitch = pitch + 4096
-	# elif state.lookDown:
-	# 	pitch += 1;
-	# 	if pitch == 4096:
-	# 		pitch = 0
+	delta_pitch = 10
 	if state.lookUp:
-		pitch -= 1;
-		if pitch == -1:
-			pitch = 4095
+		state.pitch -= delta_pitch;
+		if state.pitch < 0 :
+			state.pitch += 4096
 	elif state.lookDown:
-		pitch += 1;
-		if pitch == 4096:
-			pitch = 0
-	dataToBits(ba_buf,one,1)
-	struct.pack_into('<H',d,0,pitch)
-	dataToBits(ba_buf,d,12)
+		state.pitch += delta_pitch;
+		if state.pitch > 4095:
+			state.pitch -= 4096
+
+	if state.pitch != state.pitch_before:
+		dataToBits(ba_buf,one,1)
+		struct.pack_into('<H',d,0,state.pitch)
+		dataToBits(ba_buf,d,12)
+		state.pitch_before = state.pitch
+	else:
+		dataToBits(ba_buf,zero,1)
 
 	# /*
 	# **************************YAW*********************************
 	# */
-	if state.right:
-		yaw -= 1;
-		if yaw == -1:
-			yaw = 4095
-	elif state.left:
-		yaw += 1;
-		if yaw == 4096:
-			yaw = 0
-	dataToBits(ba_buf,one,1)
-	# crouch_test = ANGLE2SHORT12(-90);
-	struct.pack_into('<H',d,0,yaw)
-	dataToBits(ba_buf,d,12)
+	delta_yaw = 10
+	if state.lookRight:
+		state.yaw -= delta_yaw;
+		if state.yaw < 0 :
+			state.yaw += 4096
+	elif state.lookLeft:
+		state.yaw += delta_yaw;
+		if state.yaw > 4095:
+			state.yaw -= 4096
+
+	if state.yaw != state.yaw_before:
+		dataToBits(ba_buf,one,1)
+		struct.pack_into('<H',d,0,state.yaw)
+		dataToBits(ba_buf,d,12)
+		state.pitch_before = state.yaw
+	else:
+		dataToBits(ba_buf,zero,1)
 	
 	# 
 	# **************************ROLL*********************************
 	# */
 	# ROLL_ANGLE  -2047 -> 2047 AKA 0 -> 4095
-	dataToBits(ba_buf,one,1)
-	struct.pack_into('<H',d,0,roll)
-	dataToBits(ba_buf,d,12)
+	delta_roll = 10
+	if state.lookRight:
+		state.yaw -= delta_yaw;
+		if state.yaw < 0 :
+			state.yaw += 4096
+	elif state.lookLeft:
+		state.yaw += delta_yaw;
+		if state.yaw > 4095:
+			state.yaw -= 4096
+
+	if state.yaw != state.yaw_before:
+		dataToBits(ba_buf,one,1)
+		struct.pack_into('<H',d,0,state.yaw)
+		dataToBits(ba_buf,d,12)
+		state.pitch_before = state.yaw
+	else:
+		dataToBits(ba_buf,zero,1)
 
 	# 
 	# **************************FORWARDMOVE*********************************
 	# 
 	if state.moveBack:
 		dataToBits(ba_buf,one,1)
-		struct.pack_into('<H',d,0,tenbit(100))
+		struct.pack_into('<H',d,0,tenbit(-100))
 		dataToBits(ba_buf,d,10)
 	elif state.moveForward:
 		dataToBits(ba_buf,one,1)
-		struct.pack_into('<H',d,0,tenbit(-100))
+		struct.pack_into('<H',d,0,tenbit(100))
 		dataToBits(ba_buf,d,10)
 	else:
 		dataToBits(ba_buf,zero,1)
@@ -258,9 +272,9 @@ def completeUserCommandBitBuffer(player):
 	# oneDeltaUsercmd2(usercmd,uc_now.mode)
 	# oneDeltaUsercmd2(usercmd,uc_now.mode)
 
-	oneDeltaUsercmd(usercmd,player.uc_prev_prev)
-	oneDeltaUsercmd(usercmd,player.uc_prev)
-	oneDeltaUsercmd(usercmd,player.uc_now)
+	oneDeltaUsercmd(player,usercmd,player.uc_prev_prev)
+	oneDeltaUsercmd(player,usercmd,player.uc_prev)
+	oneDeltaUsercmd(player,usercmd,player.uc_now)
 	# // send this and the previous cmds in the message, so
 	# // if the last packet was dropped, it can be recovered
 

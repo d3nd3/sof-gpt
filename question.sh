@@ -1,2 +1,2 @@
 #!/bin/bash
-xvfb-run python3 ask_question.py $@
+xvfb-run python3 src/gpt/ask_question.py $@

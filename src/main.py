@@ -30,17 +30,19 @@ if __name__ == "__main__":
 	# each player will create a connection class (socket)
 	
 	endpoint = client.addEndpoint(ip,port)
+	# green visible font
+	name += "\x03"
 	client.addPlayerToEndpoint(endpoint,userinfo,name)
 
-	endpoint = client.addEndpoint("5.135.46.179","28916")
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	# endpoint = client.addEndpoint("5.135.46.179","28916")
+	# client.addPlayerToEndpoint(endpoint,userinfo,name)
 
-	endpoint = client.addEndpoint("5.135.46.179","28926")
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	# endpoint = client.addEndpoint("5.135.46.179","28926")
+	# client.addPlayerToEndpoint(endpoint,userinfo,name)
 
 
-	endpoint = client.addEndpoint("5.135.46.179","28920")
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	# endpoint = client.addEndpoint("5.135.46.179","28920")
+	# client.addPlayerToEndpoint(endpoint,userinfo,name)
 
 	client.beginLoop()
 

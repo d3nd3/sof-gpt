@@ -21,9 +21,9 @@ class Connection:
 	def __init__(self,player,server,port):
 		self.player = player
 		self.server = (server,int(port))
-		self.last_rel_sent,self.reliable_r_ack,self.reliable_s,self.reliable_r,self.out_seq,self.in_seq,self.in_ack=0,0,0,0,0,0,0
+		self.last_rel_sent,self.reliable_r_ack,self.reliable_s,self.reliable_r,self.out_seq,self.in_seq,self.in_ack=0,0,1,0,0,0,0
 		self.busy = False
-		self.qport=self.rand(5)
+		self.qport=self.rand(5) & 0x07FF
 		self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.s.settimeout(0)
 		self.connected = False
@@ -36,10 +36,11 @@ class Connection:
 		for x in range(0,len):
 			i = random.randint(0,9);
 			rand += str(i)
-		return int(''.join(map(str, rand))) & 0x7FFF
+		return int(''.join(map(str, rand))) 
 	def get_challenge(self,startTime):
 		print("[unconnected] Sending getchallenge to server")
 		self.mychal = self.rand(10)
+		# self.mychal = 1680425046
 		buf = "getchallenge {}\x0A\x00".format(self.mychal)
 		
 		self.send(False,buf.encode('ISO 8859-1'))
@@ -61,7 +62,7 @@ class Connection:
 	def connect(self,startTime):
 		print("[unconnected] Sending connect to server")
 		#sprintf(tmp_buf,"connect 33 %hu %lu %lu 3.14 "userinfo"\x0A\x00",qport,i_chal,mychal);
-		self.qport = self.rand(5)
+
 		buf = "connect 33 {} {} {} 3.14 {}\x0A".format(self.qport,self.chal,self.mychal,self.player.make_userinfo())
 
 		self.send(False,buf.encode('ISO 8859-1'))
@@ -84,6 +85,7 @@ class Connection:
 
 
 	def send(self,rel,data):
+
 		if rel:
 			self.out_seq += 1
 			msg = bytearray(10)
@@ -95,6 +97,10 @@ class Connection:
 			ba = msg + data
 		else:
 			ba = b'\xFF\xFF\xFF\xFF' + data
+
+		# print("-------------------SENDING----------------------")
+		# pretty_dump(ba)
+
 		self.s.sendto(ba,self.server)
 
 
@@ -113,6 +119,7 @@ class Connection:
 			self.last_packet_stamp = time.time()
 			view = view[:nbytes]
 
+			# print("-------------------RECEIVING----------------------")
 			# pretty_dump(view)
 
 			s=struct.unpack_from('<i',view,0)

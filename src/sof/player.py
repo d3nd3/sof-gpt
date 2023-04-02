@@ -8,31 +8,57 @@ from sof.connection import Connection
 
 class UserCmd:
 	def __init__(self):
-		self.lookUp = True
+		# roll
+		self.rollRight = False
+		self.rollLeft = False
+
+		# pitch
+		self.lookUp = False
 		self.lookDown = False
-		self.right = False
-		self.left = False
+
+		# yaw
+		self.lookRight = False
+		self.lookLeft = False
+
+		# movement
 		self.moveBack = False
 		self.moveForward = False
+
 		self.moveUp = False
 		self.moveDown = False
-		self.leanLeft = False
-		self.leanRight = False
-		self.shoot = False
+
 		self.moveLeft = False
 		self.moveRight = False
+
+		# other
+
+		self.leanLeft = False
+		self.leanRight = False
+
 		self.buttonsPressed = 0
+		self.shoot = False
 		self.fireEvent = False
 		self.altFireEvent = False
+
 		self.msec = 20
 		self.lightLevel = 5
+		
+		self.yaw = 0
+		self.pitch = 0
+		self.roll = 0
+
+		self.yaw_before = 0
+		self.pitch_before = 0
+		self.roll_before = 0
+
 		self.mode = False
 
 
 # This now represents everything
 # The Connection is only related because of having hostname/port
 class Player:
-	def __init__(self,endpoint,userinfo,name):
+	def __init__(self,main,endpoint,userinfo,name):
+		self.main = main
 		self.map = ""
 		self.mapname = ""
 		self.playernum = -1
@@ -44,6 +70,8 @@ class Player:
 		self.name = name
 		self.init = False
 		self.endpoint = endpoint
+
+
 
 		self.setup_userinfo(userinfo,name)
 
@@ -59,6 +87,7 @@ class Player:
 			return False
 		if not self.conn.connect(self.timestamp_start):
 			return False
+
 
 		self.conn.out_seq = 0
 		self.conn.in_seq = 0
