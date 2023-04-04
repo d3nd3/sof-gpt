@@ -1,4 +1,4 @@
-import sof.gpt_bridge as GPT
+import sof.chat_bridge as GPT
 
 from sof.packets.defines import *
 
@@ -30,7 +30,7 @@ class Parser:
 
 	def stufftext(buf,conn,player):
 
-		b = buf.tobytes().decode('ISO 8859-1')
+		b = buf.tobytes().decode('latin_1')
 		b = b.split("\n")
 		# return only 'cmd' stufftexts but remove cmd from front
 		retlist = [each[4:] for each in b if each and each.find("cmd ",0) >=0]
@@ -40,7 +40,7 @@ class Parser:
 			if a and a.find("cmd ",0) < 0:
 				if a.find("precache ",0) == 0:
 					player.precache = a[9:]
-					conn.send(True,"\x04download {}.eal\x00".format(player.mapname).encode('ISO 8859-1'));
+					conn.send(True,"\x04download {}.eal\x00".format(player.mapname).encode('latin_1'));
 					conn.i_downloading = 1
 					# print("SERVED BY PRECACHE STUFFTEXT\n")
 				elif a.find("reconnect",0) == 0:
@@ -91,7 +91,7 @@ def svc_sound(conn,player,view):
 def svc_print(conn,player,view):
     view=view[1:]
     s,view = Parser.string(view)
-    if s.tobytes().decode(('ISO 8859-1')) == "Server restarted\n":
+    if s.tobytes().decode(('latin_1')) == "Server restarted\n":
     	print("Server restart detected via print\n");
     	player.init = False
     # print("PACKET: print\n",s.tobytes(),s.tobytes().decode('ISO 8859-1'))
@@ -106,7 +106,7 @@ def svc_nameprint(conn,player,view):
     view=view[1:]
 
     s,view = Parser.string(view)
-    s = s.tobytes().decode('ISO 8859-1')
+    s = s.tobytes().decode('latin_1')
 
     print(f"client {data1} says : {s}")
 
@@ -133,11 +133,11 @@ def svc_stufftext(conn,player,view):
 		
 		if a.find("configstrings",0) == 0:
 			
-			conn.send(True,("\x04"+a+"\x00").encode('ISO 8859-1'))
+			conn.send(True,("\x04"+a+"\x00").encode('latin_1'))
 		elif a.find("begin",0) == 0:
 			conn.connected = True
 			# send it back to server
-			conn.send(True,(f"\x04begin {player.precache}\x00").encode('ISO 8859-1'))
+			conn.send(True,(f"\x04begin {player.precache}\x00").encode('latin_1'))
 
 		elif a.find(".check",0) == 0:
 			
@@ -162,10 +162,10 @@ def svc_stufftext(conn,player,view):
 			a = a.replace("#cl_testlights","0")
 			a = a.replace("#cl_testblend","0")
 			# send it back to server
-			conn.send(True,(f"\x04{a}\x00").encode('ISO 8859-1'))
+			conn.send(True,(f"\x04{a}\x00").encode('latin_1'))
 		else:
 			# send it back to server
-			conn.send(True,(f"\x04{a}\x00").encode('ISO 8859-1'))
+			conn.send(True,(f"\x04{a}\x00").encode('latin_1'))
 
 	return view
 
@@ -177,7 +177,7 @@ def svc_serverdata(conn,player,view):
 	player.playernum = struct.unpack_from('<h',view,0)[0]
 	view = view[2:]
 	s,view = Parser.string(view)
-	player.map = s.tobytes().decode("ISO 8859-1")
+	player.map = s.tobytes().decode("latin_1")
 
 	return view
 
@@ -199,7 +199,7 @@ def svc_spawnbaseline(conn,player,view):
 		player.precache = int(data[find_precache+9:].split(b'\x0a',1)[0])
 		# print(f"acquired precache number : {player.precache}\n")
 		# print (f"download  {player.mapname}.eal")
-		conn.send(True,(f"\x04download {player.mapname}.eal\x00").encode('ISO 8859-1'))
+		conn.send(True,(f"\x04download {player.mapname}.eal\x00").encode('latin_1'))
 		conn.i_downloading = 1
 		# print("SERVED BY BASELINE\n")
 	else:
@@ -277,13 +277,13 @@ def svc_download(conn,player,view):
 	view=view[3:]
 
 	if conn.i_downloading == 1:
-		conn.send(True,(f"\x04download {player.mapname}.sp\x00").encode('ISO 8859-1'))
+		conn.send(True,(f"\x04download {player.mapname}.sp\x00").encode('latin_1'))
 		conn.i_downloading += 1
 	elif conn.i_downloading == 2:
-		conn.send(True,(f"\x04download {player.mapname}.wrs\x00").encode('ISO 8859-1'))
+		conn.send(True,(f"\x04download {player.mapname}.wrs\x00").encode('latin_1'))
 		conn.i_downloading += 1
 	elif conn.i_downloading == 3:
-		conn.send(True,(f"\x04sv_precache {player.precache}\x00").encode('ISO 8859-1'))
+		conn.send(True,(f"\x04sv_precache {player.precache}\x00").encode('latin_1'))
 		conn.i_downloading = 0;
 
 
@@ -345,9 +345,13 @@ def svc_frame(conn,player,view):
 	if flags & PS_M_GRAVITY:
 		view=view[2:]
 	if flags & PS_M_DELTA_ANGLES:
+		player.delta_pitch = struct.unpack_from('<h',view[:2],0)[0]	
 		view=view[2:]
 		view=view[2:]
 		view=view[2:]
+	# else:
+		# player.delta_pitch = 0
+	# print(f"delta_pitch = {player.delta_pitch}")
 	if flags & PS_M_movESCALE:
 		view=view[1:]
 	if flags & PS_VIEWOFFSET:

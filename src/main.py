@@ -11,13 +11,13 @@ if __name__ == "__main__":
 	client = SofClient()
 
 	userinfo = {
-		"predictiong"			: "0",
+		"predicting"			: "0",
 		"spectator_password" 	: "specme",
 		"password"				: "player",
 		"cl_violence"			: "0",
 		"spectator"				: "0",
-		"skin"					: "dekker",
-		"teamname"				: "The Order",
+		"skin"					: "widowmaker",
+		"teamname"				: "Ministry of Sin",
 		"fov"					: "95",
 		"msg"					: "0",
 		"rate"					: "15000",

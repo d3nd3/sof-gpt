@@ -2,7 +2,7 @@ from gpt.ask_question import libVersion as gpt_ask
 from sof.packets.defines import *
 from functools import partial
 
-from util import pretty_dump
+import util
 
 import time
 
@@ -95,22 +95,35 @@ class GPT_COMMANDS:
 		delay = int(data)
 		if delay >= 0 and delay <= 100:
 			p.main.gpt["base_delay"] = delay
-			p.conn.send(True, (f"\x04say base_delay is now {delay}\x00").encode('ISO 8859-1'))
+			util.say(p,f"base_delay is now {delay}")
 
 	def scaled_delay(p, data):
 		delay = int(data)
 		if delay >= 0 and delay <= 100:
 			p.main.gpt["scaled_delay"] = delay
-			p.conn.send(True, (f"\x04say scaled_delay is now {delay}\x00").encode('ISO 8859-1'))
+			util.say(p,f"scaled_delay is now {delay}")
 
 	def forward_speed(p, data):
 		update = int(data)
 		p.uc_now.forwardSpeed = update
-		p.conn.send(True, (f"\x04say forward_speed is now {update}\x00").encode('ISO 8859-1'))
+		util.say(p,f"forward_speed is now {update}")
+
+	def custom_pitch(p,data):
+		p.custom_pitch = int(data)
+		util.say(p,f"custom_pitch is now {p.custom_pitch}")
+		
+	def skin(p, data):
+		p.userinfo["skin"] = data
+		util.say(p,f"skin is now {data}")
 
 	# COMMANDS
 	def stop(p, data):
 		p.main.gpt["chunks"] = []
+
+	def kill(p, data):
+		util.say(p,"kill")
+
+	
 
 
 gpt_commands = {
@@ -160,9 +173,12 @@ gpt_commands = {
 	"base_delay": (lambda p, data: GPT_COMMANDS.base_delay(p, data)),
 	"scaled_delay": (lambda p, data: GPT_COMMANDS.scaled_delay(p, data)),
 	"forward_speed": (lambda p, data: GPT_COMMANDS.forward_speed(p, data)),
+	"custom_pitch": (lambda p, data: GPT_COMMANDS.custom_pitch(p, data)),
 
 
 	#commands
+	"kill": (lambda p, data: GPT_COMMANDS.kill(p, data)),
+	"skin": (lambda p, data: GPT_COMMANDS.skin(p, data)),
 	"stop": (lambda p, data: GPT_COMMANDS.stop(p, data)),
 }
 
@@ -170,7 +186,7 @@ def interact(msg,player):
 	main = player.main
 	if msg.startswith("["):
 		end = msg.find("]")
-		# pretty_dump(msg.encode('ISO 8859-1'))
+		# util.pretty_dump(msg.encode('latin_1'))
 		if end > 0:
 			cmd = msg[1:end]
 			print(f"{cmd} command")
@@ -220,6 +236,7 @@ len_prev=0
 # len_prev is used to scale the timer so that it is longer for larger text length
 # called by main loop for the endpoint/player which requested the gpt.
 def output_gpt(main,conn):
+
 	len_prev = main.gpt["chunk_len_prev"]
 	chunks = main.gpt["chunks"]
 
@@ -232,7 +249,7 @@ def output_gpt(main,conn):
 			len_prev = 0
 		if time.time() - main.gpt["say_timestamp"] > base_delay+scaled_delay*len_prev/150:
 			main.gpt["say_timestamp"] = time.time()
-			conn.send(True, (f"\x04say {chunks[0]}\x00").encode('ISO 8859-1'))
+			conn.send(True, (f"\x04say {chunks[0]}\x00").encode('latin_1'))
 	
 			len_prev = len(chunks[0])
 			if len(chunks) == 1:
@@ -241,5 +258,5 @@ def output_gpt(main,conn):
 			else:
 				chunks = chunks[1:]
 
-	main.gpt["chunk_len_prev"] = len_prev
-	main.gpt["chunks"] = chunks
+		main.gpt["chunk_len_prev"] = len_prev
+		main.gpt["chunks"] = chunks

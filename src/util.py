@@ -14,3 +14,7 @@ def pretty_dump(data):
 
         print(f'{hex_line.ljust(48)} {ascii_line}')
 
+
+def say(player,msg):
+	player.conn.send(True, (f"\x04say {msg}\x00").encode('latin_1'))
+

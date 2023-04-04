@@ -6,6 +6,8 @@ from sof.packets.raw import COM_BlockSequenceCRCByte,completeUserCommandBitBuffe
 
 from sof.connection import Connection
 
+import sof.packets.types as types
+
 class UserCmd:
 	def __init__(self):
 		# roll
@@ -44,14 +46,14 @@ class UserCmd:
 		self.lightLevel = 5
 		
 		self.yaw = 0
-		self.pitch = 0
+		self.pitch = -2049
 		self.roll = 0
 
 		self.yaw_before = 0
 		self.pitch_before = 0
 		self.roll_before = 0
 
-		self.mode = False
+
 
 
 # This now represents everything
@@ -71,9 +73,19 @@ class Player:
 		self.init = False
 		self.endpoint = endpoint
 
+		self.custom_pitch = 0
+		self.delta_pitch = 0
+		self.forward_speed = 100
+		self.mode = False
 
+		self.uc_now = UserCmd()
 
-		self.setup_userinfo(userinfo,name)
+		self.usercmd = [ {"buffer":bytearray(64),"bitpos": 0} for i in range(0,3) ]
+
+		# use player.make_userinfo to return the slash seperated string form.
+		userinfo["name"] = name
+		self.userinfo = userinfo
+		self.past_userinfo = userinfo
 
 	def initialize(self):
 		self.init = True
@@ -88,45 +100,53 @@ class Player:
 		if not self.conn.connect(self.timestamp_start):
 			return False
 
-
 		self.conn.out_seq = 0
 		self.conn.in_seq = 0
 		self.conn.reliable_s = 1
 		self.conn.new()
-		self.createUserCmds()
+		
 		return True
 
 	def make_userinfo(self):
 		d = self.userinfo
-		s = '\"'
+		s = ""
+		# s = "\""
 		for key, value in d.items():
 			s += '\\' + key + '\\' + value
-		s += '\"'
+		# s+= "\""
 		return s
-	def setup_userinfo(self,ui,name):
-		ui["name"] = name
-		self.userinfo = ui
-
-	def createUserCmds(self):
-		self.uc_now = UserCmd()
-		self.uc_prev = copy.copy(self.uc_now)
-		self.uc_prev_prev = copy.copy(self.uc_now)
+		
 
 	def onEnterServer(self):
 		self.timestamp_connected = time.time()
 		# conn.send(True,(f"\x04say Hi interact with me using @sofgpt\x00").encode('ISO 8859-1'))
-		self.conn.send(True,(f"\x04say Hi!\x00").encode('ISO 8859-1'))
-	def sendMoveCommands(self):
+		self.conn.send(True,(f"{types.CLC_STRINGCMD}say Hi!\x00").encode('latin_1'))
 
-		buffer2 = bytearray.fromhex('02 00 FF FF FF FF')
+	# you can append a bytes object to a bytesarray with += , str.encode() returns bytes.
+
+	def sendMoveCommands(self):
+		buffer2 = bytearray()
+
+
+		# update userinfo if needed
+		if self.userinfo != self.past_userinfo:
+			ui = self.make_userinfo()
+			print(f"Updating userinfo!\nshow\n{ui}")
+			buffer2 += (f"{types.CLC_USERINFO}{ui}\x00").encode('latin_1')
+			# self.conn.send(True,(f"{types.CLC_USERINFO}{ui}\x00").encode('ISO 8859-1'))
+		self.past_userinfo = self.userinfo.copy()
+		
+		# CLC_MOVE
+		move_start = len(buffer2)
+		buffer2 += bytearray.fromhex('02 00 FF FF FF FF')
 		# fill the 'buffer'
 		written_bytes,written_buffer = completeUserCommandBitBuffer(self);
 		
 		buffer2 += written_buffer[:written_bytes]
-		self.uc_now.mode = not self.uc_now.mode
+		self.mode = not self.mode
 		# update lastServerFrame
 		if self.lastServerFrame == -1:
-			struct.pack_into('<i',buffer2,2,self.lastServerFrame);
+			struct.pack_into('<i',buffer2,move_start+2,self.lastServerFrame);
 		else:
 			# print(f"lastServerFrame = {self.lastServerFrame}")
 			# negative direction = older
@@ -137,19 +157,16 @@ class Player:
 			if trick_val < 0:
 				trick_val += 16
 			trick_val += 16
-			struct.pack_into('<I',buffer2,2,trick_val);
+			struct.pack_into('<I',buffer2,move_start+2,trick_val);
 			# struct.pack_into('<I',buffer2,2,self.lastServerFrame);
 
 		# length move_command and checksum byte ignored 6-2 = 4
 
 		# byte *base, int length, int sequence
-		blossom = COM_BlockSequenceCRCByte(buffer2[2:],self.conn.out_seq+1);
+		blossom = COM_BlockSequenceCRCByte(buffer2[move_start+2:],self.conn.out_seq+1);
 		# print(f'blossom is {blossom}\n')
 		buffer2[1] = blossom
 
 		# print(f'sending {buffer2}\n')
 		self.conn.send(True,buffer2);
-
-		self.uc_prev = copy.copy(self.uc_now)
-		self.uc_prev_prev = copy.copy(self.uc_prev)
 

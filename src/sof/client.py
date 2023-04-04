@@ -1,7 +1,7 @@
 from sof.player import Player
 from sof.connection import Endpoint
 
-from sof.gpt_bridge import output_gpt
+from sof.chat_bridge import output_gpt
 
 import time
 
@@ -43,6 +43,7 @@ class SofClient:
 		endpoint.players.append(p)
 
 
+	# TODO STORE ORIGIN PLAYER OF GPT REQUEST, ENSURE OUTPUT GOES THERE.
 	def talkToWorld(self):
 
 		# begin getchallenge for each connection
@@ -57,6 +58,10 @@ class SofClient:
 						continue
 				c = player.conn
 				c.recv()
+
+				if time.time() - c.last_rel_sent > 1.0:
+					c.send(True,("").encode("latin-1"))
+					continue
 			
 				# sends heartbeat 50 times a second
 				if c.connected:

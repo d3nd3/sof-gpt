@@ -38,7 +38,7 @@ def contact(question,keep_alive_func=None):
 	# 		fix_hairline=True,
 	# 		)
 
-	driver.implicitly_wait(1)
+	driver.implicitly_wait(2)
 
 	# timeout is set to 2 seconds if can't find element
 	before = time.time()
@@ -70,7 +70,7 @@ def contact(question,keep_alive_func=None):
 			response = driver.find_element(By.CSS_SELECTOR,".prose")
 
 			# wait for it to grow to full size.
-			time.sleep(1)
+			time.sleep(2)
 
 			if not (len(response.text) > previous_length):
 				# output has not grown
