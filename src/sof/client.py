@@ -5,6 +5,7 @@ from sof.chat_bridge import output_gpt
 
 import time
 
+from sof.packets.defines import *
 
 # this class represents the entire tool.
 # ideally handles multiple connections
@@ -21,7 +22,11 @@ class SofClient:
 			"chunk_len_prev" : 0,
 			"say_timestamp" : time.time(),
 			"base_delay" : 1,
-			"scaled_delay" : 4
+			"scaled_delay" : 4,
+
+			"toggle_color" : False,
+			"toggle_color_1" : P_WHITE,
+			"toggle_color_2" : P_GREEN
 		}
 
 		self.connectedCount = 0
@@ -59,25 +64,22 @@ class SofClient:
 				c = player.conn
 				c.recv()
 
-				if time.time() - c.last_rel_sent > 1.0:
-					c.send(True,("").encode("latin-1"))
-					continue
-			
+
+				# send usercmds if connected
+				player.moveAndSend()
+				
 				# sends heartbeat 50 times a second
-				if c.connected:
-					if not player.wasConnected:
+				if c.connected == 2:
+					if player.wasConnected != 2:
 						self.connectedCount +=1
 						print(f"CONNECTED: New Total : {self.connectedCount}")
-						time.sleep(0.5)
+						# time.sleep(0.5)
 						player.onEnterServer()
 
-					# send usercmds if connected
-					player.sendMoveCommands()
-
 					# send gpt output
-					output_gpt(self,c)
-				else:
-					if player.wasConnected:
+					output_gpt(self,player,c)
+				elif c.connected == 0:
+					if player.wasConnected > 0:
 						self.connectedCount -=1
 						print(f"DISCONNECTED: New Total : {self.connectedCount}")
 

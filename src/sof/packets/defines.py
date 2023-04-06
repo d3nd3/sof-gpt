@@ -74,3 +74,38 @@ BUTTON_WEAP4=16
 BUTTON_RUN=32
 BUTTON_ACTION=64
 #define BUTTON_ANY      128     // any key whatsoever
+
+P_WHITE = '\x01'
+P_RED = '\x02'
+P_GREEN = '\x03'
+P_YELLOW = '\x04'
+P_BLUE = '\x05'
+P_PURPLE = '\x06'
+P_CYAN = '\x07'
+
+P_BLACK = '\x08'
+P_HWHITE = '\x09'
+P_DONT_USE1 = '\x0A'
+P_HRED = '\x0B'
+P_HGREEN = '\x0C'
+P_DONT_USE2 = '\x0D'
+P_HYELLOW = '\x0E'
+P_HBLUE = '\x0F'
+
+P_CAMOBROWN = '\x10'
+P_CAMOGREEN = '\x11'
+P_SEAGREEN = '\x12'
+P_SEABLUE = '\x13'
+P_METAL = '\x14'
+P_DBLUE = '\x15'
+P_DPURPLE = '\x16'
+P_DGREY = '\x17'
+
+P_PINK = '\x18'
+P_BLOODRED = '\x19'
+P_RUSSET = '\x1A'
+P_BROWN = '\x1B'
+P_TEXT = '\x1C'
+P_BAIGE = '\x1D'
+P_LBROWN = '\x1E'
+P_ORANGE = '\x1F'

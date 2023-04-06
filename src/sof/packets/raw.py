@@ -11,37 +11,115 @@ zero = bytes((0,))
 bitpos = 0
 
 
-def copy_bits(src, dst,ss, dd, n):
-    # determine starting and ending byte positions for copying
-    src_start_byte = ss // 8
-    dst_start_byte = dd // 8
-    src_end_byte = (ss + n - 1) // 8
-    dst_end_byte = (dd + n - 1) // 8
+def copy_bits2(src: bytearray, dst: bytearray, src_bitpos: int, dst_bitpos: int, num_bits: int) -> None:
+	"""
+	Copies specified number of bits from source to destination byte arrays starting from specified bit positions.
+	
+	Parameters:
+	src (bytearray): The source byte array to copy bits from.
+	dst (bytearray): The destination byte array to copy bits to.
+	src_bitpos (int): The bit position in source byte array to start copying bits from.
+	dst_bitpos (int): The bit position in destination byte array to start copying bits to.
+	num_bits (int): The number of bits to copy.
+	
+	Returns:
+	None
+	"""
+	for i in range(num_bits):
+		src_byte_index = (src_bitpos + i) // 8
+		src_bit_index = (src_bitpos + i) % 8
+		src_bit_value = (src[src_byte_index] >> (7 - src_bit_index)) & 1
+		
+		dst_byte_index = (dst_bitpos + i) // 8
+		dst_bit_index = (dst_bitpos + i) % 8
+		dst_bit_value = (dst[dst_byte_index] >> (7 - dst_bit_index)) & 1
+		
+		dst[dst_byte_index] &= ~(1 << (7 - dst_bit_index))
+		dst[dst_byte_index] |= (src_bit_value << (7 - dst_bit_index))
 
-    # copy complete bytes first
-    for i in range(src_start_byte, src_end_byte + 1):
-        byte = src[i]
-        if i == src_start_byte:
-            byte >>= ss % 8
-        if i == src_end_byte:
-            byte &= (1 << ((ss + n) % 8)) - 1
-        dst_offset = dd % 8
-        if dst_offset == 0:
-            dst[dst_start_byte] = byte
-        else:
-            dst[dst_start_byte] &= (1 << dst_offset) - 1
-            dst[dst_start_byte] |= byte << dst_offset
-            dst[dst_start_byte + 1] = byte >> (8 - dst_offset)
-        dst_start_byte += 1
+def copy_bits3(src: bytearray, dst: bytearray, src_bitpos: int, dst_bitpos: int, num_bits: int) -> None:
+	"""
+	Copies `num_bits` bits from the `src` bytearray starting at bit position `src_bitpos` to the `dst` bytearray
+	starting at bit position `dst_bitpos`.
+	
+	:param src: the source bytearray
+	:param dst: the destination bytearray
+	:param src_bitpos: the starting bit position in the source bytearray (0-indexed)
+	:param dst_bitpos: the starting bit position in the destination bytearray (0-indexed)
+	:param num_bits: the number of bits to copy
+	:return: None
+	"""
+	for i in range(num_bits):
+		src_bytepos = (src_bitpos + i) // 8
+		src_bitpos_in_byte = (src_bitpos + i) % 8
+		dst_bytepos = (dst_bitpos + i) // 8
+		dst_bitpos_in_byte = (dst_bitpos + i) % 8
+		
+		src_byte = src[src_bytepos]
+		src_bit = (src_byte >> (7 - src_bitpos_in_byte)) & 0x01
+		dst_byte = dst[dst_bytepos]
+		if src_bit:
+			dst_byte |= (0x01 << (7 - dst_bitpos_in_byte))
+		else:
+			dst_byte &= ~(0x01 << (7 - dst_bitpos_in_byte))
+		dst[dst_bytepos] = dst_byte
 
-    # copy remaining bits
-    remaining_bits = n % 8
-    if remaining_bits > 0:
-        last_byte = dst[dst_end_byte]
-        last_byte &= (1 << dd % 8) - 1
-        last_byte |= (src[src_end_byte] & ((1 << remaining_bits) - 1)) << (dd % 8)
-        dst[dst_end_byte] = last_byte
+def copy_bits4(src: bytearray, dst: bytearray, src_bitpos: int, dst_bitpos: int, num_bits: int) -> None:
+	"""
+	Copy bits from src bytearray to dst bytearray.
+	
+	Args:
+		src (bytearray): source bytearray to copy bits from
+		dst (bytearray): destination bytearray to copy bits to
+		src_bitpos (int): starting bit position in the src bytearray
+		dst_bitpos (int): starting bit position in the dst bytearray
+		num_bits (int): number of bits to copy
+	
+	Returns:
+		None
+	"""
+	# Compute the byte and bit offset for the src and dst
+	src_bytepos, src_bitoffset = divmod(src_bitpos, 8)
+	dst_bytepos, dst_bitoffset = divmod(dst_bitpos, 8)
+	
+	# Copy the bits from the src to the dst
+	for i in range(num_bits):
+		# Get the current bit from the src bytearray
+		src_byte = src[src_bytepos]
+		src_bit = (src_byte >> (7 - src_bitoffset)) & 1
+		
+		# Copy the current bit to the dst bytearray
+		dst_byte = dst[dst_bytepos]
+		if src_bit:
+			dst_byte |= (1 << (7 - dst_bitoffset))
+		else:
+			dst_byte &= ~(1 << (7 - dst_bitoffset))
+		dst[dst_bytepos] = dst_byte
+		
+		# Move to the next bit position in the src and dst bytearrays
+		src_bitoffset += 1
+		if src_bitoffset == 8:
+			src_bytepos += 1
+			src_bitoffset = 0
+			
+		dst_bitoffset += 1
+		if dst_bitoffset == 8:
+			dst_bytepos += 1
+			dst_bitoffset = 0
 
+
+def copy_bits(src: bytearray, dst : bytearray , src_bitpos: int, dst_bitpos: int, num_bits: int) -> None:
+	for i in range(num_bits):
+		src_byte = src[src_bitpos // 8]
+		dst_byte = dst[dst_bitpos // 8]
+		src_mask = 1 << (src_bitpos % 8)
+		dst_mask = 1 << (dst_bitpos % 8)
+		if src_byte & src_mask:
+			dst[dst_bitpos // 8] = dst_byte | dst_mask
+		else:
+			dst[dst_bitpos // 8] = dst_byte & ~dst_mask
+		src_bitpos += 1
+		dst_bitpos += 1
 
 
 def dataToBits(stream, indata, bits, nosign=True):
@@ -78,16 +156,6 @@ def dataToBits(stream, indata, bits, nosign=True):
 					dataToBits(stream,zero,1)
 			bits = bits - 1
 	
-	# if ( bits <=8 ) {
-	# 	printf("extract %i bits from byte %02X\n",bits,*(unsigned char*)indata);
-	# } else
-	# if ( bits <= 16 ) {
-	# 	printf("extract %i bits from short %04X :: %hu\n",bits,*(short*)indata,*(short*)indata);
-	# } else
-	# if ( bits <= 32 ) {
-	# 	printf("extract %i bits from dword/float %08X :: %d :: %f\n",bits,*(int*)indata,*(int*)indata,*(float*)indata);
-	# }
-	# iterate bits
 	
 	for i in range(bits):
 		# convert bitpos into byte?
@@ -118,62 +186,38 @@ def dataToBits(stream, indata, bits, nosign=True):
 			stream[currentByte] = stream[currentByte] & ~out_bitmask
 		bitpos += 1
 
-	# for ( int i = 0;  i < 64; i ++ ) {
-	# printf( "%02X ",lol[i] );
-	# }
-	# printf("\n");
-
+	return bits
 
 def tenbit(n):
 	n = n * 0.01 * 510
 	return int(n) + 510
 
-# since it writes bits, bitpos is handling the position
+def simpleDeltaUsercmd(player,bitbuffer):
+	bits_written = 0
 
-# Shooting with BUTTON_ATTACK requires predicting cvar 0.
-def oneDeltaUsercmd(player,append_bitbuffer):
+	bits_written += dataToBits(append_bitbuffer,zero,1)
+	bits_written += dataToBits(append_bitbuffer,zero,1)
+	bits_written += dataToBits(append_bitbuffer,zero,1)
 
-	generalMoveSpeed = player.forward_speed
+	bits_written += dataToBits(append_bitbuffer,zero,1)
+	bits_written += dataToBits(append_bitbuffer,zero,1)
+	bits_written += dataToBits(append_bitbuffer,zero,1)
 
-	state = player.uc_now
+	# buttons,lean,light
+	bits_written += dataToBits(append_bitbuffer,one,1)
+	bits_written += dataToBits(append_bitbuffer,zero,8)
+	bits_written += dataToBits(append_bitbuffer,zero,1)
+	bits_written += dataToBits(append_bitbuffer,zero,1)
 
-	d = bytearray(4)
+	# msec
+	bits_written += dataToBits(append_bitbuffer,bytes((20,)),8)
 
+	# prediction_fire
+	bits_written += dataToBits(append_bitbuffer,zero,1)
+	bits_written += dataToBits(append_bitbuffer,zero,1)
 
-	# POSSIBLE THAT THE SERVER EXPECTS A PITCH/YAW/ROLL ALWAYS.
+	return bits_written
 
-	# PITCH_ANGLE -2047 -> 2047 AKA 0 -> 4095
-	# 
-	# **************************PITCH*********************************
-	# 
-	delta_pitch = 10
-	if state.lookUp:
-		state.pitch -= delta_pitch
-		if state.pitch < -2048 :
-			state.pitch += 4096
-	elif state.lookDown:
-		state.pitch += delta_pitch
-		if state.pitch > 2047:
-			state.pitch -= 4096
-
-# 65536 / 4096 = 16
-
-	# delta pitch is in 65536 ( 16 bits )
-	# convert to 12 bits ( 4096 )
-
-#  - 2048
-	# state.pitch = player.delta_pitch
-	state.pitch = player.custom_pitch - (player.delta_pitch // 16)
-	# if state.pitch < -32768:
-	# 	state.pitch += 65536
-	# elif state.pitch > 32767:
-	# 	state.pitch -= 65536
-	if state.pitch < -2048:
-		state.pitch += 4096
-	elif state.pitch > 2047:
-		state.pitch -= 4096
-
-	# -2049 == flat?
 # ----------------------------------------------------
 	# -2048 == looking up ( protection bug )
 	# -2047 == looking up
@@ -183,200 +227,270 @@ def oneDeltaUsercmd(player,append_bitbuffer):
 	# 2047 == looking down ( protection bug )
 	# 2048 == looking up ( protection bug)
 # ----------------------------------------------------
+	# 65536 / 4096 = 16
+	# delta pitch is in 65536 ( 16 bits )
+	# convert to 12 bits ( 4096 )
 
+# -2048 -> 2047
+# since it writes bits, bitpos is handling the position
+# Shooting with BUTTON_ATTACK requires predicting cvar 0.
+def deltaUsercmd(player,bitbuffer):
 
-	# if state.pitch != state.pitch_before:
-	dataToBits(append_bitbuffer,one,1)
-	struct.pack_into('<h',d,0,state.pitch)
-	dataToBits(append_bitbuffer,d,12)
+	bits_written = 0
+	generalMoveSpeed = player.forward_speed
+
+	state = player.uc_now
+
+	d = bytearray(4)
+	
+	if state.lookUp:
+		state.pitch -= player.pitch_speed
+		if state.pitch < -2048 :
+			state.pitch += 4096
+	elif state.lookDown:
+		state.pitch += player.pitch_speed
+		if state.pitch > 2047:
+			state.pitch -= 4096
+
+	if player.custom_pitch != 9999:
+		state.pitch = player.custom_pitch
+
+	# this this causes bug for player assume always have to send?
+	# if state.pitch_before != state.pitch:
+		# changed
+	network_pitch = state.pitch - (player.delta_pitch // 16)
+	if network_pitch < -2048:
+		network_pitch += 4096
+	elif network_pitch > 2047:
+		network_pitch -= 4096
+
+	bits_written += dataToBits(bitbuffer,one,1)
+	struct.pack_into('<h',d,0,network_pitch)
+	bits_written += dataToBits(bitbuffer,d,12)
+
 	state.pitch_before = state.pitch
 	# else:
-	# 	dataToBits(append_bitbuffer,zero,1)
+	# 	bits_written += dataToBits(bitbuffer,zero,1)
 
 	# /*
 	# **************************YAW*********************************
 	# */
-	delta_yaw = 10
+	
 	if state.lookRight:
-		state.yaw -= delta_yaw;
-		if state.yaw < 0 :
+		state.yaw -= player.yaw_speed
+		if state.yaw < -2048 :
 			state.yaw += 4096
 	elif state.lookLeft:
-		state.yaw += delta_yaw;
-		if state.yaw > 4095:
+		state.yaw += player.yaw_speed
+		if state.yaw > 2047:
 			state.yaw -= 4096
 
-	# if state.yaw != state.yaw_before:
-	dataToBits(append_bitbuffer,one,1)
-	struct.pack_into('<h',d,0,state.yaw)
-	dataToBits(append_bitbuffer,d,12)
+	if player.custom_yaw != 9999:
+		state.yaw = player.custom_yaw
+
+	# if state.yaw_before != state.yaw:
+	# 	# changed
+	network_yaw = state.yaw - (player.delta_yaw // 16)
+	if network_yaw < -2048:
+		network_yaw += 4096
+	elif network_yaw > 2047:
+		network_yaw -= 4096
+
+	bits_written += dataToBits(bitbuffer,one,1)
+	struct.pack_into('<h',d,0,network_yaw)
+	bits_written += dataToBits(bitbuffer,d,12)
 	state.yaw_before = state.yaw
 	# else:
-	# 	dataToBits(append_bitbuffer,zero,1)
-	
+	# 	bits_written += dataToBits(bitbuffer,zero,1)
 	# 
 	# **************************ROLL*********************************
 	# */
 	# ROLL_ANGLE  -2047 -> 2047 AKA 0 -> 4095
-	delta_roll = 10
+	
 	if state.rollRight:
-		state.yaw -= delta_roll;
-		if state.roll < 0 :
+		state.roll -= player.roll_speed
+		if state.roll < -2048 :
 			state.roll += 4096
 	elif state.rollLeft:
-		state.roll += delta_roll;
-		if state.roll > 4095:
+		state.roll += player.roll_speed
+		if state.roll > 2047:
 			state.roll -= 4096
 
-	# if state.roll != state.roll_before:
-	dataToBits(append_bitbuffer,one,1)
-	struct.pack_into('<h',d,0,state.roll)
-	dataToBits(append_bitbuffer,d,12)
+	if player.custom_roll != 9999:
+		state.roll = player.custom_roll
+
+	# if state.roll_before != state.roll:
+	network_roll = state.roll - (player.delta_roll // 16)
+	if network_roll < -2048:
+		network_roll += 4096
+	elif network_roll > 2047:
+		network_roll -= 4096
+
+	bits_written += dataToBits(bitbuffer,one,1)
+	struct.pack_into('<h',d,0,network_roll)
+	bits_written += dataToBits(bitbuffer,d,12)
 	state.roll_before = state.roll
 	# else:
-		# dataToBits(append_bitbuffer,zero,1)
-
+	# 	bits_written += dataToBits(bitbuffer,zero,1)
 	# 
 	# **************************FORWARDMOVE*********************************
 	# 
 	if state.moveBack:
-		dataToBits(append_bitbuffer,one,1)
+		bits_written += dataToBits(bitbuffer,one,1)
 		struct.pack_into('<H',d,0,tenbit(-1 * generalMoveSpeed))
-		dataToBits(append_bitbuffer,d,10)
+		bits_written += dataToBits(bitbuffer,d,10)
 	elif state.moveForward:
-		dataToBits(append_bitbuffer,one,1)
+		bits_written += dataToBits(bitbuffer,one,1)
 		struct.pack_into('<H',d,0,tenbit(generalMoveSpeed))
-		dataToBits(append_bitbuffer,d,10)
+		bits_written += dataToBits(bitbuffer,d,10)
 	else:
-		dataToBits(append_bitbuffer,zero,1)
+		bits_written += dataToBits(bitbuffer,zero,1)
+		# bits_written += dataToBits(bitbuffer,one,1)
+		# struct.pack_into('<H',d,0,tenbit(0))
+		# bits_written += dataToBits(bitbuffer,d,10)
 	
 	# /*
 	# **************************SIDEMOVE*********************************
 	# */
 	if state.moveLeft:
 		# optional
-		dataToBits(append_bitbuffer,one,1)
+		bits_written += dataToBits(bitbuffer,one,1)
 		struct.pack_into('<H',d,0,tenbit(-1 * generalMoveSpeed))
 		# non-optional
-		dataToBits(append_bitbuffer,d,10)
+		bits_written += dataToBits(bitbuffer,d,10)
 	elif state.moveRight:
 		# optional
-		dataToBits(append_bitbuffer,one,1)
+		bits_written += dataToBits(bitbuffer,one,1)
 		struct.pack_into('<H',d,0,tenbit(generalMoveSpeed))
 		# non-optional
-		dataToBits(append_bitbuffer,d,10)
+		bits_written += dataToBits(bitbuffer,d,10)
 	else:
 		# non-optional
-		dataToBits(append_bitbuffer,zero,1)
+		bits_written += dataToBits(bitbuffer,zero,1)
+		# bits_written += dataToBits(bitbuffer,one,1)
+		# struct.pack_into('<H',d,0,tenbit(0))
+		# bits_written += dataToBits(bitbuffer,d,10)
 
 	# /*
 	# **************************UPMOVE*********************************
-	# */
+	# */ I believe this -160 -> 160
 	if state.moveUp:
-		dataToBits(append_bitbuffer,one,1)
+		bits_written += dataToBits(bitbuffer,one,1)
 		struct.pack_into('<H',d,0,tenbit(generalMoveSpeed))
-		dataToBits(append_bitbuffer,d,10)
+		bits_written += dataToBits(bitbuffer,d,10)
 	elif state.moveDown:
-		dataToBits(append_bitbuffer,one,1)
+		bits_written += dataToBits(bitbuffer,one,1)
 		struct.pack_into('<H',d,0,tenbit(-1 * generalMoveSpeed))
-		dataToBits(append_bitbuffer,d,10)
+		bits_written += dataToBits(bitbuffer,d,10)
 	else:
 		# upmove requires this else the player doesnt obey gravity correctly glitch on spawn?
-		dataToBits(append_bitbuffer,one,1)
+		bits_written += dataToBits(bitbuffer,one,1)
 		struct.pack_into('<H',d,0,tenbit(0))
-		dataToBits(append_bitbuffer,d,10)
-		# dataToBits(append_bitbuffer,zero,1)
+		bits_written += dataToBits(bitbuffer,d,10)
+
+		# player cant move?
+		# bits_written += dataToBits(bitbuffer,zero,1)
 
 	# BUTTONS
-	if player.mode:
+	if state.fireEvent:
 		# dataToBits(append_bitbuffer,zero,1)
-		state.buttonsPressed &= ~BUTTON_ATTACK
-		dataToBits(append_bitbuffer,one,1)
+		state.buttonsPressed |= BUTTON_USE
+		bits_written += dataToBits(bitbuffer,one,1)
 		b = bytes((state.buttonsPressed,))
-		dataToBits(append_bitbuffer,b,8)
+		bits_written += dataToBits(bitbuffer,b,8)
 	else:
-		state.buttonsPressed |= BUTTON_ATTACK
-		dataToBits(append_bitbuffer,one,1)
+		state.buttonsPressed &= ~BUTTON_USE
+		
+		bits_written += dataToBits(bitbuffer,one,1)
 		b = bytes((state.buttonsPressed,))
-		dataToBits(append_bitbuffer,b,8)
+		bits_written += dataToBits(bitbuffer,b,8)
 
+	# LEAN
 	if state.leanLeft:
-		dataToBits(append_bitbuffer,one,1)
-		dataToBits(append_bitbuffer,zero,1)
+		bits_written += dataToBits(bitbuffer,one,1)
+		bits_written += dataToBits(bitbuffer,zero,1)
 	elif state.leanRight:
-		dataToBits(append_bitbuffer,one,1)
-		dataToBits(append_bitbuffer,one,1)
+		bits_written += dataToBits(bitbuffer,one,1)
+		bits_written += dataToBits(bitbuffer,one,1)
 	else:
-		dataToBits(append_bitbuffer,zero,1)
+		bits_written += dataToBits(bitbuffer,zero,1)
 	
 
 	# /*
 	# **************************LIGHTLEVEL*********************************
 	# */
 	# lightlevel - used for visibility a.i of computer to target you?
-	dataToBits(append_bitbuffer,one,1)
+	bits_written += dataToBits(bitbuffer,one,1)
 	state.lightLevel = 5
 	b = bytes((state.lightLevel,))
-	dataToBits(append_bitbuffer,b,5)
+	bits_written += dataToBits(bitbuffer,b,5)
 
 	# MSEC IS UNIQUE, NO TICK FOR IT FORCED.
 	b = bytes((state.msec,))
-	dataToBits(append_bitbuffer,b,8)
+	bits_written += dataToBits(bitbuffer,b,8)
 
+	# if state.fireEvent:
+	# player.forwardspeed
+	
 	if state.fireEvent:
-		dataToBits(append_bitbuffer,one,1)
-		struct.pack_into('<I',d,0,0)
-		dataToBits(append_bitbuffer,d,32)
+		state.fireEvent = False
+		bits_written += dataToBits(bitbuffer,one,1)
+		struct.pack_into('<f',d,0,1.0)
+		bits_written += dataToBits(bitbuffer,d,32)
 	else:
-		dataToBits(append_bitbuffer,zero,1)
+		bits_written += dataToBits(bitbuffer,zero,1)
+		
 
-	if state.altFireEvent:
-		dataToBits(append_bitbuffer,one,1)
-		struct.pack_into('<I',d,0,0)
-		dataToBits(append_bitbuffer,d,32)
-	else:
-		dataToBits(append_bitbuffer,zero,1)
+	# if state.altFireEvent:
+	# bits_written += dataToBits(bitbuffer,one,1)
+	# struct.pack_into('<I',d,0,0)
+	# bits_written += dataToBits(bitbuffer,d,32)
+	# else:
+	bits_written += dataToBits(bitbuffer,zero,1)
+
+	return bits_written
 
 
 
-def completeUserCommandBitBuffer(player):
+def completeUserCommandBitBuffer(player,return_buffer):
 	# assume points to the next bit to write ( thus is bit count )
 	global bitpos
 	bitpos = 0
 
-	# one big buffer returned
-	return_buffer = bytearray(64)
+	# if player.usercmd[1] == 0:
+	# 	player.usercmd[1]["bit_length"] = simpleDeltaUsercmd(player,return_buffer)
+	# else:
+	# 1 = OLDEST -2
+	# copies past buffers into output
+	copy_bits(player.usercmd[1]["buffer"],return_buffer,0,bitpos,player.usercmd[1]["bit_length"])
+	bitpos += player.usercmd[1]["bit_length"]
 
-
-
-	# its a bit - writer , thus byte copying doesn't work
-	# copy_bits(player.usercmd[2]["buffer"],return_buffer,0,bitpos,player.usercmd[2]["bitpos"])
-	# bitpos += player.usercmd[2]["bitpos"]
-
-	# copy_bits(player.usercmd[1]["buffer"],return_buffer,0,bitpos,player.usercmd[1]["bitpos"])
-	# bitpos += player.usercmd[1]["bitpos"]
+	# if player.usercmd[0] == 0:
+	# 	player.usercmd[0]["bit_length"] = simpleDeltaUsercmd(player,return_buffer)
+	# else:
+	# 0 = LESS OLD -1
+	copy_bits(player.usercmd[0]["buffer"],return_buffer,0,bitpos,player.usercmd[0]["bit_length"])
+	bitpos += player.usercmd[0]["bit_length"]
 
 	bitpos_before = bitpos
 	# global bitpos handles the absolute write position.
-	oneDeltaUsercmd(player,return_buffer)
-	oneDeltaUsercmd(player,return_buffer)
-	oneDeltaUsercmd(player,return_buffer)
+	bits = deltaUsercmd(player,return_buffer)
+	# bits = deltaUsercmd(player,return_buffer)
+	# bits = deltaUsercmd(player,return_buffer)
 
-	# # saving
-	# player.usercmd[0]["bitpos"] = bitpos - bitpos_before
-	# copy_bits(return_buffer,player.usercmd[0]["buffer"],bitpos_before,0,player.usercmd[0]["bitpos"])
+	# update past buffers for next frame
 	
+	# COPY OLDER into OLDEST
+	copy_bits(player.usercmd[0]["buffer"],player.usercmd[1]["buffer"],0,0,player.usercmd[0]["bit_length"])
+	player.usercmd[1]["bit_length"] = player.usercmd[0]["bit_length"]
 
-	# player.usercmd[2]["buffer"] = bytearray(player.usercmd[1]["buffer"])
-	# player.usercmd[2]["bitpos"] = player.usercmd[1]["bitpos"]
-
-	# player.usercmd[1]["buffer"] = bytearray(player.usercmd[0]["buffer"])
-	# player.usercmd[1]["bitpos"] = player.usercmd[0]["bitpos"]
+	# COPY NOW INTO OLDER
+	copy_bits(return_buffer,player.usercmd[0]["buffer"],bitpos_before,0,bits)
+	player.usercmd[0]["bit_length"] = bits
 	
+	# bytesWritten = (bitpos+7)//8
 	bytesWritten = bitpos//8
-
-	return (bytesWritten,return_buffer)
-
+	return bytesWritten
 
 chktbl2 = b'\x60\xe5\x60\x3e\x00\x00\x00\x00\xdf\xbf\x79\x3f\x61\xfe\x8a\x3d\x54\xe3\x55\x3e\xdf\xbf\x79\x3f\xa1\x67\xdb\x3e\x00\x00\x00\x00\xbe\x4d\x67\x3f\xe5\x62\x94\x3e\x5a\x9e\x57\x3e\x82\x02\x6f\x3f\x5f\x99\x07\x3e\x86\xaa\xd0\x3e\xbe\x4d\x67\x3f\xf2\xd2\x1d\x3f\x00\x00\x00\x00\x19\x90\x49\x3f\x2b\x89\x00\x3f\x20\x7f\x59\x3e\x88\x9c\x56\x3f\x6a\xdd\xb6\x3e\x76\xe2\xd2\x3e\x88\x9c\x56\x3f\xcb\x14\x43\x3e\x76\x19\x16\x3f\x19\x90\x49\x3f\x1d\x3d\x46\x3f\x00\x00\x00\x00\xca\xfa\x21\x3f\xb8\xe4\x30\x3f\xe2\xca\x59\x3e\xa9\xdc\x30\x3f\xf1\xb7\x11\x3f\xbe\xbd\xd3\x3e\x89\xea\x35\x3f\x86\xe4\xd4\x3e\x01\x69\x17\x3f\xa9\xdc\x30\x3f\x7d\x09\x75\x3e\x4c\x89\x3c\x3f\xca\xfa\x21\x3f\x2b\xf9\x64\x3f\x00\x00\x00\x00\x3c\xf9\xe4\x3e\xe9\x9c\x57\x3f\x54\xe3\x55\x3e\x64\x76\xfe\x3e\x49\xb9\x3f\x3f\x86\xaa\xd0\x3e\x59\xc3\x05\x3f\x03\x79\x1e\x3f\x76\x19\x16\x3f\x59\xc3\x05\x3f\x4d\xf7\xea\x3e\x4c\x89\x3c\x3f\x64\x76\xfe\x3e\x62\x83\x8d\x3e\x44\xc4\x59\x3f\x3c\xf9\xe4\x3e\xbf\xf1\x35\xbe\xb1\x30\x04\x3e\xdf\xbf\x79\x3f\xae\xb6\xe2\xbd\x5d\x70\xae\x3e\x82\x02\x6f\x3f\x91\x80\xb1\xbe\x8c\xf6\x80\x3e\xbe\x4d\x67\x3f\xb0\xe3\x3f\xbd\x13\x0c\x0b\x3f\x78\x9c\x56\x3f\x06\x0e\x90\xbe\xfd\x14\xef\x3e\x78\x9c\x56\x3f\x57\x5d\xff\xbe\x6e\x88\xb9\x3e\x19\x90\x49\x3f\xba\x4d\x38\x3c\xa6\x0f\x39\x3f\xa9\xdc\x30\x3f\x59\xa3\x5e\xbe\x6a\x4d\x2b\x3f\x89\xea\x35\x3f\x4c\x36\xde\xbe\x5b\x06\x14\x3f\xa9\xdc\x30\x3f\xee\x60\x20\xbf\x20\x0b\xe9\x3e\xca\xfa\x21\x3f\xea\x5d\x7c\x3d\x79\x95\x5d\x3f\x64\x76\xfe\x3e\x57\xec\x1f\xbe\xbc\x94\x56\x3f\x59\xc3\x05\x3f\x86\x90\xbb\xbe\x8b\x19\x45\x3f\x59\xc3\x05\x3f\x21\x01\x0f\xbf\x76\xfe\x29\x3f\x64\x76\xfe\x3e\x4f\x3e\x39\xbf\x4f\x96\x06\x3f\x3c\xf9\xe4\x3e\xbf\xf1\x35\xbe\xb1\x30\x04\xbe\xdf\xbf\x79\x3f\x72\x6a\xb7\xbe\x00\x00\x00\x00\x82\x02\x6f\x3f\x91\x80\xb1\xbe\x8c\xf6\x80\xbe\xbe\x4d\x67\x3f\xa1\xf2\x07\xbf\x6b\x7e\xfc\x3d\x78\x9c\x56\x3f\xa1\xf2\x07\xbf\xf1\x7e\xfc\xbd\x78\x9c\x56\x3f\x57\x5d\xff\xbe\x6e\x88\xb9\xbe\x19\x90\x49\x3f\x1d\x1d\x2f\xbf\xfa\xb3\x6f\x3e\xa9\xdc\x30\x3f\x36\x1e\x34\xbf\x00\x00\x00\x00\x89\xea\x35\x3f\x1d\x1d\x2f\xbf\x3e\xb4\x6f\xbe\xa9\xdc\x30\x3f\xdd\x60\x20\xbf\x20\x0b\xe9\xbe\xca\xfa\x21\x3f\x5d\xdd\x4d\xbf\xc7\xf2\xa6\x3e\x64\x76\xfe\x3e\xf4\x6e\x58\xbf\x0f\x48\xe2\x3d\x59\xc3\x05\x3f\xf4\x6e\x58\xbf\x0f\x48\xe2\xbd\x59\xc3\x05\x3f\x5d\xdd\x4d\xbf\xc7\xf2\xa6\xbe\x64\x76\xfe\x3e\x4f\x3e\x39\xbf\x4f\x96\x06\xbf\x3c\xf9\xe4\x3e\x61\xfe\x8a\x3d\x54\xe3\x55\xbe\xdf\xbf\x79\x3f\xae\xb6\xe2\xbd\x5d\x70\xae\xbe\x82\x02\x6f\x3f\xa2\x99\x07\x3e\x86\xaa\xd0\xbe\xbe\x4d\x67\x3f\x06\x0e\x90\xbe\xfd\x14\xef\xbe\x88\x9c\x56\x3f\xb0\xe3\x3f\xbd\x13\x0c\x0b\xbf\x88\x9c\x56\x3f\xcb\x14\x43\x3e\x76\x19\x16\xbf\x19\x90\x49\x3f\x4c\x36\xde\xbe\x5b\x06\x14\xbf\x98\xdc\x30\x3f\x59\xa3\x5e\xbe\x6a\x4d\x2b\xbf\x89\xea\x35\x3f\xba\x4d\x38\x3c\xa6\x0f\x39\xbf\x98\xdc\x30\x3f\x7d\x09\x75\x3e\x4c\x89\x3c\xbf\xca\xfa\x21\x3f\x21\x01\x0f\xbf\x76\xfe\x29\xbf\x64\x76\xfe\x3e\x86\x90\xbb\xbe\x8b\x19\x45\xbf\x59\xc3\x05\x3f\x57\xec\x1f\xbe\xbc\x94\x56\xbf\x59\xc3\x05\x3f\xf6\x5e\x7c\x3d\x79\x95\x5d\xbf\x64\x76\xfe\x3e\x62\x83\x8d\x3e\x44\xc4\x59\xbf\x3c\xf9\xe4\x3e\xe5\x62\x94\x3e\x5a\x9e\x57\xbe\x82\x02\x6f\x3f\x6a\xdd\xb6\x3e\x76\xe2\xd2\xbe\x78\x9c\x56\x3f\x2b\x89\x00\x3f\x20\x7f\x59\xbe\x78\x9c\x56\x3f\x86\xe4\xd4\x3e\x01\x69\x17\xbf\x98\xdc\x30\x3f\xf1\xb7\x11\x3f\xbe\xbd\xd3\xbe\x89\xea\x35\x3f\xb8\xe4\x30\x3f\xe2\xca\x59\xbe\x98\xdc\x30\x3f\x4d\xf7\xea\x3e\x4c\x89\x3c\xbf\x64\x76\xfe\x3e\x03\x79\x1e\x3f\x76\x19\x16\xbf\x59\xc3\x05\x3f\x49\xb9\x3f\x3f\x86\xaa\xd0\xbe\x59\xc3\x05\x3f\xe9\x9c\x57\x3f\x54\xe3\x55\xbe\x64\x76\xfe\x3e\x8c\xb9\x73\x3f\xb1\x30\x04\xbe\xd5\x03\x8e\x3e\x8c\xb9\x73\x3f\xb1\x30\x04\x3e\xd5\x03\x8e\x3e\x3a\x93\x76\x3f\x6a\xf6\x80\xbe\x42\x7c\xc0\x3d\x36\xca\x7e\x3f\x00\x00\x00\x00\x54\xe6\xc6\x3d\x29\x93\x76\x3f\x8c\xf6\x80\x3e\x42\x7c\xc0\x3d\x7c\x62\x6d\x3f\x6e\x88\xb9\xbe\x42\x7c\xc0\xbd\x7b\xc0\x7c\x3f\x6b\x7e\xfc\xbd\x8c\xf2\xcc\xbd\x7b\xc0\x7c\x3f\xf1\x7e\xfc\x3d\x8c\xf2\xcc\xbd\x7c\x62\x6d\x3f\x6e\x88\xb9\x3e\x42\x7c\xc0\xbd\x35\x9a\x58\x3f\x20\x0b\xe9\xbe\xd5\x03\x8e\xbe\xd8\x80\x6c\x3f\xfa\xb3\x6f\xbe\x13\x10\x9b\xbe\x0f\x43\x73\x3f\x00\x00\x00\x00\x80\x7e\x9f\xbe\xd8\x80\x6c\x3f\x3e\xb4\x6f\x3e\x13\x10\x9b\xbe\x35\x9a\x58\x3f\x20\x0b\xe9\x3e\xd5\x03\x8e\xbe\x4f\x3e\x39\x3f\x4f\x96\x06\xbf\x3c\xf9\xe4\xbe\x5d\xdd\x4d\x3f\xc7\xf2\xa6\xbe\x64\x76\xfe\xbe\xf4\x6e\x58\x3f\x0f\x48\xe2\xbd\x59\xc3\x05\xbf\xf4\x6e\x58\x3f\x0f\x48\xe2\x3d\x59\xc3\x05\xbf\x5d\xdd\x4d\x3f\xc7\xf2\xa6\x3e\x64\x76\xfe\xbe\x4f\x3e\x39\x3f\x4f\x96\x06\x3f\x3c\xf9\xe4\xbe\x9e\x7d\xd5\x3e\x79\x95\x5d\x3f\xd5\x03\x8e\x3e\x4c\x8a\x2f\x3e\x21\x02\x72\x3f\xd5\x03\x8e\x3e\x7b\x85\x09\x3f\xbc\x94\x56\x3f\x42\x7c\xc0\x3d\xfb\x77\x9d\x3e\xd2\x51\x72\x3f\x54\xe6\xc6\x3d\xa2\xec\x6d\x3d\xb9\x6e\x7e\x3f\x42\x7c\xc0\x3d\x03\x95\x21\x3f\x8b\x19\x45\x3f\x42\x7c\xc0\xbd\x64\x3e\xd8\x3e\xdc\xa0\x66\x3f\x8c\xf2\xcc\xbd\xa7\x59\x40\x3e\x70\x22\x7a\x3f\x8c\xf2\xcc\xbd\xa2\xec\x6d\xbd\xb9\x6e\x7e\x3f\x42\x7c\xc0\xbd\xa9\xc0\x31\x3f\x76\xfe\x29\x3f\xd5\x03\x8e\xbe\x90\x13\x02\x3f\xe4\x68\x4e\x3f\x13\x10\x9b\xbe\x1d\x58\x96\x3e\x1d\x5b\x67\x3f\x80\x7e\x9f\xbe\x99\xb9\x80\x3d\x2e\x72\x73\x3f\x13\x10\x9b\xbe\x4c\x8a\x2f\xbe\x21\x02\x72\x3f\xd5\x03\x8e\xbe\x21\x01\x0f\x3f\x76\xfe\x29\x3f\x64\x76\xfe\xbe\x86\x90\xbb\x3e\x8b\x19\x45\x3f\x59\xc3\x05\xbf\x57\xec\x1f\x3e\xbc\x94\x56\x3f\x59\xc3\x05\xbf\xea\x5d\x7c\xbd\x79\x95\x5d\x3f\x64\x76\xfe\xbe\x62\x83\x8d\xbe\x44\xc4\x59\x3f\x3c\xf9\xe4\xbe\xa9\xc0\x31\xbf\x76\xfe\x29\x3f\xd5\x03\x8e\x3e\x35\x9a\x58\xbf\x20\x0b\xe9\x3e\xd5\x03\x8e\x3e\x03\x95\x21\xbf\x8b\x19\x45\x3f\x42\x7c\xc0\x3d\x21\x21\x4e\xbf\x05\xc3\x15\x3f\x54\xe6\xc6\x3d\x7c\x62\x6d\xbf\x6e\x88\xb9\x3e\x42\x7c\xc0\x3d\x7b\x85\x09\xbf\xbc\x94\x56\x3f\x42\x7c\xc0\xbd\xd0\xed\x39\xbf\x11\x19\x2e\x3f\x8c\xf2\xcc\xbd\x46\x08\x5f\xbf\x3d\x0f\xf6\x3e\x8c\xf2\xcc\xbd\x3a\x93\x76\xbf\x6a\xf6\x80\x3e\x42\x7c\xc0\xbd\x9e\x7d\xd5\xbe\x79\x95\x5d\x3f\xd5\x03\x8e\xbe\x93\x1c\x1c\xbf\x80\x7e\x3b\x3f\x13\x10\x9b\xbe\x96\xcd\x44\xbf\x59\xfc\x0e\x3f\x80\x7e\x9f\xbe\x08\x8f\x62\xbf\x6f\x10\xb5\x3e\x13\x10\x9b\xbe\x8c\xb9\x73\xbf\xb1\x30\x04\x3e\xd5\x03\x8e\xbe\x4d\xf7\xea\xbe\x4c\x89\x3c\x3f\x64\x76\xfe\xbe\x03\x79\x1e\xbf\x76\x19\x16\x3f\x59\xc3\x05\xbf\x49\xb9\x3f\xbf\x86\xaa\xd0\x3e\x59\xc3\x05\xbf\xe9\x9c\x57\xbf\x54\xe3\x55\x3e\x64\x76\xfe\xbe\x2b\xf9\x64\xbf\x00\x00\x00\x00\x3c\xf9\xe4\xbe\x35\x9a\x58\xbf\x20\x0b\xe9\xbe\xd5\x03\x8e\x3e\xa9\xc0\x31\xbf\x76\xfe\x29\xbf\xd5\x03\x8e\x3e\x6b\x62\x6d\xbf\x6e\x88\xb9\xbe\x42\x7c\xc0\x3d\x21\x21\x4e\xbf\x05\xc3\x15\xbf\x54\xe6\xc6\x3d\x03\x95\x21\xbf\x8b\x19\x45\xbf\x42\x7c\xc0\x3d\x3a\x93\x76\xbf\x8c\xf6\x80\xbe\x42\x7c\xc0\xbd\x46\x08\x5f\xbf\x3d\x0f\xf6\xbe\x8c\xf2\xcc\xbd\xd0\xed\x39\xbf\x11\x19\x2e\xbf\x8c\xf2\xcc\xbd\x7b\x85\x09\xbf\xbc\x94\x56\xbf\x42\x7c\xc0\xbd\x8c\xb9\x73\xbf\xb1\x30\x04\xbe\xd5\x03\x8e\xbe\x08\x8f\x62\xbf\x6f\x10\xb5\xbe\x13\x10\x9b\xbe\x96\xcd\x44\xbf\x59\xfc\x0e\xbf\x80\x7e\x9f\xbe\x93\x1c\x1c\xbf\x80\x7e\x3b\xbf\x13\x10\x9b\xbe\x9e\x7d\xd5\xbe\x79\x95\x5d\xbf\xd5\x03\x8e\xbe\xe9\x9c\x57\xbf\x97\xe3\x55\xbe\x64\x76\xfe\xbe\x49\xb9\x3f\xbf\x86\xaa\xd0\xbe\x59\xc3\x05\xbf\x03\x79\x1e\xbf\x76\x19\x16\xbf\x59\xc3\x05\xbf\x4d\xf7\xea\xbe\x4c\x89\x3c\xbf\x64\x76\xfe\xbe\x62\x83\x8d\xbe\x44\xc4\x59\xbf\x3c\xf9\xe4\xbe\x4c\x8a\x2f\x3e\x21\x02\x72\xbf\xd5\x03\x8e\x3e\x9e\x7d\xd5\x3e\x79\x95\x5d\xbf\xd5\x03\x8e\x3e\xa2\xec\x6d\x3d\xb9\x6e\x7e\xbf\x42\x7c\xc0\x3d\xfb\x77\x9d\x3e\xd2\x51\x72\xbf\x54\xe6\xc6\x3d\x7b\x85\x09\x3f\xab\x94\x56\xbf\x42\x7c\xc0\x3d\xa2\xec\x6d\xbd\xb9\x6e\x7e\xbf\x42\x7c\xc0\xbd\xa7\x59\x40\x3e\x70\x22\x7a\xbf\x8c\xf2\xcc\xbd\x64\x3e\xd8\x3e\xcb\xa0\x66\xbf\x8c\xf2\xcc\xbd\x03\x95\x21\x3f\x7a\x19\x45\xbf\x42\x7c\xc0\xbd\x4c\x8a\x2f\xbe\x21\x02\x72\xbf\xd5\x03\x8e\xbe\x99\xb9\x80\x3d\x2e\x72\x73\xbf\x13\x10\x9b\xbe\x1d\x58\x96\x3e\x1d\x5b\x67\xbf\x80\x7e\x9f\xbe\x90\x13\x02\x3f\xe4\x68\x4e\xbf\x13\x10\x9b\xbe\xa9\xc0\x31\x3f\x76\xfe\x29\xbf\xd5\x03\x8e\xbe\xea\x5d\x7c\xbd\x79\x95\x5d\xbf\x64\x76\xfe\xbe\x57\xec\x1f\x3e\xbc\x94\x56\xbf\x59\xc3\x05\xbf\x86\x90\xbb\x3e\x8b\x19\x45\xbf\x59\xc3\x05\xbf\x21\x01\x0f\x3f\x76\xfe\x29\xbf\x64\x76\xfe\xbe\x21\x21\x4e\x3f\x05\xc3\x15\x3f\x54\xe6\xc6\xbd\xd0\xed\x39\x3f\x11\x19\x2e\x3f\x8c\xf2\xcc\x3d\x46\x08\x5f\x3f\x3d\x0f\xf6\x3e\x8c\xf2\xcc\x3d\x93\x1c\x1c\x3f\x80\x7e\x3b\x3f\x13\x10\x9b\x3e\x96\xcd\x44\x3f\x59\xfc\x0e\x3f\x80\x7e\x9f\x3e\x08\x8f\x62\x3f\x6f\x10\xb5\x3e\x13\x10\x9b\x3e\xfb\x77\x9d\xbe\xd2\x51\x72\x3f\x54\xe6\xc6\xbd\x64\x3e\xd8\xbe\xcb\xa0\x66\x3f\x8c\xf2\xcc\x3d\xa7\x59\x40\xbe\x70\x22\x7a\x3f\x8c\xf2\xcc\x3d\x90\x13\x02\xbf\xe4\x68\x4e\x3f\x13\x10\x9b\x3e\x1d\x58\x96\xbe\x1d\x5b\x67\x3f\x80\x7e\x9f\x3e\x99\xb9\x80\xbd\x2e\x72\x73\x3f\x13\x10\x9b\x3e\x36\xca\x7e\xbf\x00\x00\x00\x00\x54\xe6\xc6\xbd\x7b\xc0\x7c\xbf\xf1\x7e\xfc\xbd\x8c\xf2\xcc\x3d\x7b\xc0\x7c\xbf\x6b\x7e\xfc\x3d\x8c\xf2\xcc\x3d\xd8\x80\x6c\xbf\x3e\xb4\x6f\xbe\x13\x10\x9b\x3e\x0f\x43\x73\xbf\x00\x00\x00\x00\x80\x7e\x9f\x3e\xd8\x80\x6c\xbf\xfa\xb3\x6f\x3e\x13\x10\x9b\x3e\xfb\x77\x9d\xbe\xd2\x51\x72\xbf\x54\xe6\xc6\xbd\xa7\x59\x40\xbe\x70\x22\x7a\xbf\x8c\xf2\xcc\x3d\x64\x3e\xd8\xbe\xdc\xa0\x66\xbf\x8c\xf2\xcc\x3d\x99\xb9\x80\xbd\x2e\x72\x73\xbf\x13\x10\x9b\x3e\x1d\x58\x96\xbe\x1d\x5b\x67\xbf\x80\x7e\x9f\x3e\x90\x13\x02\xbf\xe4\x68\x4e\xbf\x13\x10\x9b\x3e\x21\x21\x4e\x3f\xf4\xc2\x15\xbf\x54\xe6\xc6\xbd\x46\x08\x5f\x3f\x3d\x0f\xf6\xbe\x8c\xf2\xcc\x3d\xd0\xed\x39\x3f\x11\x19\x2e\xbf\x8c\xf2\xcc\x3d\x08\x8f\x62\x3f\x6f\x10\xb5\xbe\x13\x10\x9b\x3e\x96\xcd\x44\x3f\x59\xfc\x0e\xbf\x80\x7e\x9f\x3e\x93\x1c\x1c\x3f\x80\x7e\x3b\xbf\x13\x10\x9b\x3e\x61\xfe\x8a\xbd\x54\xe3\x55\x3e\xdf\xbf\x79\xbf\xbf\xf1\x35\x3e\xb1\x30\x04\x3e\xdf\xbf\x79\xbf\x5f\x99\x07\xbe\x86\xaa\xd0\x3e\xbe\x4d\x67\xbf\xae\xb6\xe2\x3d\x5d\x70\xae\x3e\x82\x02\x6f\xbf\x91\x80\xb1\x3e\x8c\xf6\x80\x3e\xbe\x4d\x67\xbf\xcb\x14\x43\xbe\x76\x19\x16\x3f\x19\x90\x49\xbf\xb0\xe3\x3f\x3d\x13\x0c\x0b\x3f\x88\x9c\x56\xbf\x06\x0e\x90\x3e\xfd\x14\xef\x3e\x88\x9c\x56\xbf\x57\x5d\xff\x3e\x6e\x88\xb9\x3e\x19\x90\x49\xbf\x7d\x09\x75\xbe\x4c\x89\x3c\x3f\xca\xfa\x21\xbf\xba\x4d\x38\xbc\xa6\x0f\x39\x3f\xa9\xdc\x30\xbf\x59\xa3\x5e\x3e\x6a\x4d\x2b\x3f\x89\xea\x35\xbf\x4c\x36\xde\x3e\x5b\x06\x14\x3f\xa9\xdc\x30\xbf\xee\x60\x20\x3f\x20\x0b\xe9\x3e\xca\xfa\x21\xbf\x60\xe5\x60\xbe\x00\x00\x00\x00\xdf\xbf\x79\xbf\xa1\x67\xdb\xbe\x00\x00\x00\x00\xbe\x4d\x67\xbf\xe5\x62\x94\xbe\x5a\x9e\x57\x3e\x82\x02\x6f\xbf\xf2\xd2\x1d\xbf\x00\x00\x00\x00\x19\x90\x49\xbf\x2b\x89\x00\xbf\x20\x7f\x59\x3e\x88\x9c\x56\xbf\x6a\xdd\xb6\xbe\x76\xe2\xd2\x3e\x88\x9c\x56\xbf\x1d\x3d\x46\xbf\x00\x00\x00\x00\xca\xfa\x21\xbf\xb8\xe4\x30\xbf\xe2\xca\x59\x3e\xa9\xdc\x30\xbf\xf1\xb7\x11\xbf\xbe\xbd\xd3\x3e\x89\xea\x35\xbf\x86\xe4\xd4\xbe\x01\x69\x17\x3f\xa9\xdc\x30\xbf\x61\xfe\x8a\xbd\x54\xe3\x55\xbe\xdf\xbf\x79\xbf\x5f\x99\x07\xbe\x86\xaa\xd0\xbe\xbe\x4d\x67\xbf\xe5\x62\x94\xbe\x5a\x9e\x57\xbe\x82\x02\x6f\xbf\xcb\x14\x43\xbe\x76\x19\x16\xbf\x19\x90\x49\xbf\x6a\xdd\xb6\xbe\x76\xe2\xd2\xbe\x78\x9c\x56\xbf\x2b\x89\x00\xbf\x20\x7f\x59\xbe\x78\x9c\x56\xbf\x7d\x09\x75\xbe\x4c\x89\x3c\xbf\xca\xfa\x21\xbf\x86\xe4\xd4\xbe\x01\x69\x17\xbf\xa9\xdc\x30\xbf\xf1\xb7\x11\xbf\xe0\xbd\xd3\xbe\x89\xea\x35\xbf\xb8\xe4\x30\xbf\xe2\xca\x59\xbe\xa9\xdc\x30\xbf\xbf\xf1\x35\x3e\xb1\x30\x04\xbe\xdf\xbf\x79\xbf\x91\x80\xb1\x3e\x6a\xf6\x80\xbe\xbe\x4d\x67\xbf\xae\xb6\xe2\x3d\x5d\x70\xae\xbe\x82\x02\x6f\xbf\x57\x5d\xff\x3e\x6e\x88\xb9\xbe\x19\x90\x49\xbf\x06\x0e\x90\x3e\xfd\x14\xef\xbe\x78\x9c\x56\xbf\xb0\xe3\x3f\x3d\x13\x0c\x0b\xbf\x78\x9c\x56\xbf\xee\x60\x20\x3f\x20\x0b\xe9\xbe\xca\xfa\x21\xbf\x4c\x36\xde\x3e\x5b\x06\x14\xbf\x98\xdc\x30\xbf\x59\xa3\x5e\x3e\x6a\x4d\x2b\xbf\x89\xea\x35\xbf\xba\x4d\x38\xbc\xa6\x0f\x39\xbf\x98\xdc\x30\xbf\x72\x6a\xb7\x3e\x00\x00\x00\x00\x82\x02\x6f\xbf\xa1\xf2\x07\x3f\xf1\x7e\xfc\x3d\x78\x9c\x56\xbf\xb2\xf2\x07\x3f\x6b\x7e\xfc\xbd\x78\x9c\x56\xbf\x1d\x1d\x2f\x3f\x3e\xb4\x6f\x3e\x98\xdc\x30\xbf\x36\x1e\x34\x3f\x00\x00\x00\x00\x89\xea\x35\xbf\x1d\x1d\x2f\x3f\xfa\xb3\x6f\xbe\x98\xdc\x30\xbf'
 

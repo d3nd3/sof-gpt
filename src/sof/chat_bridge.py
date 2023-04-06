@@ -1,10 +1,13 @@
 from gpt.ask_question import libVersion as gpt_ask
-from sof.packets.defines import *
+
 from functools import partial
 
-import util
+from sof.packets.defines import *
+from sof.packets.types import *
 
+import util
 import time
+import sys
 
 
 class GPT_COMMANDS:
@@ -27,9 +30,9 @@ class GPT_COMMANDS:
 		p.uc_now.lookUp = False
 
 	def plus_lookdown(p, data):
-		p.uc_now.lookUp = True
+		p.uc_now.lookDown = True
 	def minus_lookdown(p, data):
-		p.uc_now.lookUp = False
+		p.uc_now.lookDown = False
 
 	# YAW
 	def plus_left(p, data):
@@ -111,6 +114,26 @@ class GPT_COMMANDS:
 	def custom_pitch(p,data):
 		p.custom_pitch = int(data)
 		util.say(p,f"custom_pitch is now {p.custom_pitch}")
+
+	def custom_yaw(p,data):
+		p.custom_yaw = int(data)
+		util.say(p,f"custom_yaw is now {p.custom_yaw}")
+
+	def custom_roll(p,data):
+		p.custom_roll = int(data)
+		util.say(p,f"custom_roll is now {p.custom_roll}")
+
+	def pitch_speed(p,data):
+		p.pitch_speed = int(data)
+		util.say(p,f"pitch_speed is now {p.pitch_speed}")
+
+	def yaw_speed(p,data):
+		p.yaw_speed = int(data)
+		util.say(p,f"yaw_speed is now {p.yaw_speed}")
+
+	def roll_speed(p,data):
+		p.roll_speed = int(data)
+		util.say(p,f"roll_speed is now {p.roll_speed}")
 		
 	def skin(p, data):
 		p.userinfo["skin"] = data
@@ -123,7 +146,17 @@ class GPT_COMMANDS:
 	def kill(p, data):
 		util.say(p,"kill")
 
-	
+	def test(p, data):
+		util.say(p,"test")
+		p.uc_now.fireEvent = True
+
+	def quit(p,data):
+		util.say(p,f"Goodbye!")
+		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
+		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
+		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
+		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
+		sys.exit(0)
 
 
 gpt_commands = {
@@ -172,14 +205,24 @@ gpt_commands = {
 	# settings
 	"base_delay": (lambda p, data: GPT_COMMANDS.base_delay(p, data)),
 	"scaled_delay": (lambda p, data: GPT_COMMANDS.scaled_delay(p, data)),
+
 	"forward_speed": (lambda p, data: GPT_COMMANDS.forward_speed(p, data)),
+
 	"custom_pitch": (lambda p, data: GPT_COMMANDS.custom_pitch(p, data)),
+	"custom_yaw": (lambda p, data: GPT_COMMANDS.custom_yaw(p, data)),
+	"custom_roll": (lambda p, data: GPT_COMMANDS.custom_roll(p, data)),
+
+	"pitch_speed": (lambda p, data: GPT_COMMANDS.pitch_speed(p, data)),
+	"yaw_speed": (lambda p, data: GPT_COMMANDS.yaw_speed(p, data)),
+	"roll_speed": (lambda p, data: GPT_COMMANDS.roll_speed(p, data)),
 
 
 	#commands
+	"test": (lambda p, data: GPT_COMMANDS.test(p, data)),
 	"kill": (lambda p, data: GPT_COMMANDS.kill(p, data)),
 	"skin": (lambda p, data: GPT_COMMANDS.skin(p, data)),
 	"stop": (lambda p, data: GPT_COMMANDS.stop(p, data)),
+	# "quit": (lambda p, data: GPT_COMMANDS.quit(p, data)),
 }
 
 def interact(msg,player):
@@ -194,8 +237,9 @@ def interact(msg,player):
 				gpt_commands[cmd](player,msg[end+1:])
 	elif not len(main.gpt["chunks"]):
 		# not in a request?lets go
-		answer = gpt_ask(msg,main.talkToWorld)
-		generate_chunks_gpt(main,answer)
+		pass
+		# answer = gpt_ask(msg,main.talkToWorld)
+		# generate_chunks_gpt(main,answer)
 
 
 # split the gpt response into chunks that fit nicely into sof say
@@ -235,7 +279,7 @@ len_prev=0
 # Prints one lines of gpt text , and removes it from list.
 # len_prev is used to scale the timer so that it is longer for larger text length
 # called by main loop for the endpoint/player which requested the gpt.
-def output_gpt(main,conn):
+def output_gpt(main,player,conn):
 
 	len_prev = main.gpt["chunk_len_prev"]
 	chunks = main.gpt["chunks"]
@@ -249,10 +293,20 @@ def output_gpt(main,conn):
 			len_prev = 0
 		if time.time() - main.gpt["say_timestamp"] > base_delay+scaled_delay*len_prev/150:
 			main.gpt["say_timestamp"] = time.time()
-			conn.send(True, (f"\x04say {chunks[0]}\x00").encode('latin_1'))
+
+			main.gpt["toggle_color"] = not main.gpt["toggle_color"]
+			if main.gpt["toggle_color"]:
+				color = main.gpt["toggle_color_1"]
+			else:
+				color = main.gpt["toggle_color_2"]
+
+			util.changeTextColor(player,color)
+			conn.append_string_to_reliable(f"\x04say {chunks[0]}\x00")
 	
 			len_prev = len(chunks[0])
 			if len(chunks) == 1:
+				# cleanup
+				util.changeTextColor(player,player.textColor)
 				chunks = []
 				len_prev = 0
 			else:

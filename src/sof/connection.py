@@ -21,17 +21,34 @@ class Connection:
 	def __init__(self,player,server,port):
 		self.player = player
 		self.server = (server,int(port))
-		self.last_rel_sent,self.them_send_count,self.them_receipt,self.us_send_count,self.us_receipt=0,0,0,0,0
-		self.bystand_buffer = bytearray()
+		
+
+		self.their_seq_is_r = 0
+		self.their_seq = 0
+
+		self.our_seq = 0
+		self.our_ack = 1
+		self.our_ack_is_r = 0
+		self.our_seq_is_r = 0
+		self.our_last_rel_seq = 0
+
+		self.last_sent_time = time.time()
+		self.last_packet_stamp = time.time()
+
+		self.backup_rel_data = bytearray()
+		self.future_rel_data = bytearray()
+		self.dropped = 0
+
+
 		self.busy = False
 		self.qport=self.rand(5) & 0x07FF
 		# self.qport = 33333
 		self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.s.settimeout(0)
-		self.connected = False
+		self.connected = 0
 		self.expectmapname = False
 		self.i_downloading = 0
-		self.last_packet_stamp = 0
+		
 		
 	def rand(self,len):
 		rand = []
@@ -45,7 +62,7 @@ class Connection:
 		# self.mychal = 1680425046
 		buf = "getchallenge {}\x0A\x00".format(self.mychal)
 		
-		self.send(False,buf.encode('latin_1'))
+		self.send_unconnected(buf.encode('latin_1'))
 		while True:
 			# time.sleep(1)
 			o = self.recv()
@@ -68,8 +85,8 @@ class Connection:
 		buf = "connect 33 {} {} {} 3.14 {}\x0A".format(self.qport,self.chal,self.mychal,"\"" + self.player.make_userinfo() + "\"")
 		# buf = "connect 33 {} {} {} 3.14 {}\x0A".format(self.qport,self.chal,self.mychal,self.player.make_userinfo())
 
-		self.send(False,buf.encode('latin_1'))
-		while True:	
+		self.send_unconnected(buf.encode('latin_1'))
+		while True:
 			# time.sleep(1)
 
 			o = self.recv()
@@ -83,35 +100,122 @@ class Connection:
 	def new(self):
 		print("[connected] Sending new to server")
 		buf = "\x04new\x00"
+		self.connected = 1
 		print(buf.encode('latin_1'))
-		self.send(True,buf.encode('latin_1'))
+		self.append_string_to_reliable(buf)
 
 
-	def send(self,rel,data):
-		if rel:
-			# them_receipt_r == saved us_seq_r
-			# NEW reliable
-			if len(self.bystand_buffer) == 0:
-				self.bystand_buffer = bytearray(data)
-				reliable_s = 1
+	def append_string_to_reliable(self,what):
+		self.future_rel_data += what.encode('latin_1')
 
-			self.out_seq += 1
-			msg = bytearray(10)
-			# print(f"reliable_s is {self.reliable_s}")
-			# print(f"reliable_r is {self.reliable_r}")
-			struct.pack_into('<I',msg,0,(self.out_seq & (~(1<<31) & 0xFFFFFFFF))|(reliable_s<<31))
-			struct.pack_into('<I',msg,4,(self.in_seq & (~(1<<31) & 0xFFFFFFFF))|(self.reliable_r<<31))
-			struct.pack_into('<H',msg,8,self.qport)
-			ba = msg + self.bystand_buffer
-			
-		else:
-			ba = b'\xFF\xFF\xFF\xFF' + data
+	def append_to_reliable(self,what):
+		self.future_rel_data += what
 
-		print("-------------------SENDING----------------------")
-		pretty_dump(ba)
+	# WE VERIFY "THEIR" REMOTES PACKETS (PATH B)
+	# THEY VERIFY "OUR" PACKETS (PATH A)
 
-		self.s.sendto(ba,self.server)
-		self.last_rel_sent = time.time()
+	# REFER TO DIAGRAM GOOGLE NOTES
+	def netchan_process(self,view):
+		# print("-------------------RECEIVING----------------------")
+		# pretty_dump(view)
+
+
+		#so must be connected packet...
+		their_seq = struct.unpack_from('<I',view,0)[0]
+		view = view[4:]
+
+		# acquire reliable BITS
+		their_seq_is_r = their_seq >> 31
+		
+		our_ack = struct.unpack_from('<I',view,0)[0]
+		view = view[4:]
+
+		our_ack_is_r = our_ack >> 31
+
+		# strip reliable bit
+		their_seq = their_seq & ~(1<<31)
+		our_ack = our_ack & ~(1<<31)
+
+		# conn.their_seq is only allowed to increase // discard stale or duplicated packets
+		if their_seq <= self.their_seq:
+			return (view, False)
+
+		# measure how many sequence numbers were skipped
+		self.dropped = their_seq - (self.their_seq+1);
+
+		# clear reliable backups. ACKED
+		# OUR PATH A PACKET HAS RETURNED TO US
+		if our_ack_is_r == self.our_seq_is_r:
+			self.backup_rel_data = bytearray()
+		
+		# ----save stuff-----
+		# IN_SEQ BECOMES OUT_ACK
+		self.their_seq = their_seq 
+		# THE SEQ NUMBER OF THE LAST PACKET THE REMOTE RECEIVED FROM US
+		# Used to confirm that the conn.our_ack_is_r is valid ( > last_rel )
+		self.our_ack = our_ack 
+		self.our_ack_is_r = our_ack_is_r
+
+		# THEIR PATH
+		if their_seq_is_r:
+			# TOGGLE REMOTES RELIABLE
+			self.their_seq_is_r ^= 1
+
+		self.last_packet_stamp = time.time()
+		return (view, True)
+
+
+	# called by CL_SendCmd
+	# WE VERIFY "THEIR" REMOTES PACKETS (PATH B)
+	# THEY VERIFY "OUR" PACKETS (PATH A)
+	# every time this is called directly unreliable data is flushed through
+	# seems its only called directly with disconnect command.
+	# and incoming acks are checked with reliable toggle bit
+	def netchan_transmit(self,unreliable_data):
+
+		send_reliable = 0
+
+		# PATH A WAS DROPPED?
+		if self.our_ack > self.our_last_rel_seq and self.our_ack_is_r != self.our_seq_is_r:
+			send_reliable = 1
+
+		# backup empty AND future_send non-empty
+		# aka : BACKUP WAS ACKED in netchan_process : SEND NEW REL DATA
+		if not len(self.backup_rel_data) and len(self.future_rel_data):
+			self.backup_rel_data = bytearray(self.future_rel_data)
+			self.future_rel_data = bytearray()
+			self.our_seq_is_r ^= 1
+			send_reliable = 1
+
+		msg = bytearray(10)
+
+		struct.pack_into('<I',msg,0,(self.our_seq & (~(1<<31) & 0xFFFFFFFF))|(send_reliable<<31))
+		struct.pack_into('<I',msg,4,(self.their_seq & (~(1<<31) & 0xFFFFFFFF))|(self.their_seq_is_r<<31))
+		struct.pack_into('<H',msg,8,self.qport)
+		
+
+		self.our_seq += 1
+		self.last_sent_time = time.time()
+		if send_reliable:
+			msg += self.backup_rel_data
+			self.our_last_rel_seq = self.our_seq
+
+		# add unreliable here
+		msg += unreliable_data
+
+
+		# print("--------------SENDING CONNECTED-----------------")
+		# pretty_dump(msg)
+
+		self.s.sendto(msg,self.server)
+
+
+	def send_unconnected(self,data):
+		send_buffer = b'\xFF\xFF\xFF\xFF' + data
+		self.s.sendto(send_buffer,self.server)
+
+		print("---------------SENDING UNCONNECTED-----------------")
+		pretty_dump(send_buffer)
 
 	def recv(self):
 		while True:
@@ -126,11 +230,8 @@ class Connection:
 					return False
 				print("Network Error")
 				sys.exit(1)
-			self.last_packet_stamp = time.time()
+			
 			view = view[:nbytes]
-
-			print("-------------------RECEIVING----------------------")
-			pretty_dump(view)
 
 			s=struct.unpack_from('<i',view,0)
 			if s[0] == -1:
@@ -140,27 +241,16 @@ class Connection:
 			else:
 				# print("[CONNECTED PACKET RECEIVED]: ",bytes(view),"\n")
 				pass
-			#so must be connected packet...
-			self.in_seq = struct.unpack_from('<I',view,0)[0]
-			view = view[4:]
-			reliable_message = self.in_seq >> 31
+
 			
-			if reliable_message :
-				self.reliable_r ^= 1
 
-			# turn off last bit
-			self.in_seq = self.in_seq & ~(1<<31)
+			view,ret = self.netchan_process(view)
+			if ret == False:
+				# discard stale or duplicate packet
+				print("Discarding.")
+				continue
 
-
-			self.in_ack = struct.unpack_from('<I',view,0)[0]
-			view = view[4:]
-			reliable_ack = self.in_ack >> 31
-
-			# if we waiting for reliable ack and we got reliable ack
-			if reliable_ack && len(self.bystand_buffer):
-				self.bystand_buffer = bytearray()
-
-
+			
 
 			# there are many commands inside 1 packet
 			# if you cannot parse 1 packet, you can't parse the others.

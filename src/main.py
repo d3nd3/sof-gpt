@@ -11,7 +11,7 @@ if __name__ == "__main__":
 	client = SofClient()
 
 	userinfo = {
-		"predicting"			: "0",
+		"predicting"			: "1",
 		"spectator_password" 	: "specme",
 		"password"				: "player",
 		"cl_violence"			: "0",
@@ -31,7 +31,7 @@ if __name__ == "__main__":
 	
 	endpoint = client.addEndpoint(ip,port)
 	# green visible font
-	name += "\x03"
+
 	client.addPlayerToEndpoint(endpoint,userinfo,name)
 
 	# endpoint = client.addEndpoint("5.135.46.179","28916")

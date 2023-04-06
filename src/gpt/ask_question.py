@@ -26,7 +26,7 @@ def contact(question,keep_alive_func=None):
 	# options.add_argument("--headless")
 	
 	# driver = webdriver.Chrome(chromium_driver,options=options)
-	driver = uc.Chrome(options=options)
+	driver = uc.Chrome(options=options, version_main=111)
 	driver.get('https://chat.openai.com/chat')
 
 	# stealth(driver,

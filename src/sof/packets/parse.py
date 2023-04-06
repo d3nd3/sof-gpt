@@ -40,12 +40,12 @@ class Parser:
 			if a and a.find("cmd ",0) < 0:
 				if a.find("precache ",0) == 0:
 					player.precache = a[9:]
-					conn.send(True,"\x04download {}.eal\x00".format(player.mapname).encode('latin_1'));
+					conn.append_string_to_reliable("\x04download {}.eal\x00".format(player.mapname))
 					conn.i_downloading = 1
 					# print("SERVED BY PRECACHE STUFFTEXT\n")
 				elif a.find("reconnect",0) == 0:
 					print("They want you to reconnect by stufftext\n")
-					conn.connected = False
+					conn.connected = 0
 					conn.new()
 					# player.init = False
 
@@ -132,13 +132,11 @@ def svc_stufftext(conn,player,view):
 	for a in l:
 		
 		if a.find("configstrings",0) == 0:
-			
-			conn.send(True,("\x04"+a+"\x00").encode('latin_1'))
+			conn.append_string_to_reliable("\x04"+a+"\x00")
 		elif a.find("begin",0) == 0:
-			conn.connected = True
+			conn.connected = 2
 			# send it back to server
-			conn.send(True,(f"\x04begin {player.precache}\x00").encode('latin_1'))
-
+			conn.append_string_to_reliable(f"\x04begin {player.precache}\x00")
 		elif a.find(".check",0) == 0:
 			
 			a = a.replace("#cl_minfps","5")
@@ -162,15 +160,16 @@ def svc_stufftext(conn,player,view):
 			a = a.replace("#cl_testlights","0")
 			a = a.replace("#cl_testblend","0")
 			# send it back to server
-			conn.send(True,(f"\x04{a}\x00").encode('latin_1'))
+			conn.append_string_to_reliable(f"\x04{a}\x00")
 		else:
 			# send it back to server
-			conn.send(True,(f"\x04{a}\x00").encode('latin_1'))
+			conn.append_string_to_reliable(f"\x04{a}\x00")
 
 	return view
 
 def svc_serverdata(conn,player,view):
 	# print("PACKET: serverdata\n")
+	conn.connected = 1
 	conn.expectmapname = True
 	view = view[9:]
 	s,view = Parser.string(view)
@@ -199,7 +198,7 @@ def svc_spawnbaseline(conn,player,view):
 		player.precache = int(data[find_precache+9:].split(b'\x0a',1)[0])
 		# print(f"acquired precache number : {player.precache}\n")
 		# print (f"download  {player.mapname}.eal")
-		conn.send(True,(f"\x04download {player.mapname}.eal\x00").encode('latin_1'))
+		conn.append_string_to_reliable(f"\x04download {player.mapname}.eal\x00")
 		conn.i_downloading = 1
 		# print("SERVED BY BASELINE\n")
 	else:
@@ -277,13 +276,13 @@ def svc_download(conn,player,view):
 	view=view[3:]
 
 	if conn.i_downloading == 1:
-		conn.send(True,(f"\x04download {player.mapname}.sp\x00").encode('latin_1'))
+		conn.append_string_to_reliable(f"\x04download {player.mapname}.sp\x00")
 		conn.i_downloading += 1
 	elif conn.i_downloading == 2:
-		conn.send(True,(f"\x04download {player.mapname}.wrs\x00").encode('latin_1'))
+		conn.append_string_to_reliable(f"\x04download {player.mapname}.wrs\x00")
 		conn.i_downloading += 1
 	elif conn.i_downloading == 3:
-		conn.send(True,(f"\x04sv_precache {player.precache}\x00").encode('latin_1'))
+		conn.append_string_to_reliable(f"\x04sv_precache {player.precache}\x00")
 		conn.i_downloading = 0;
 
 
@@ -347,7 +346,9 @@ def svc_frame(conn,player,view):
 	if flags & PS_M_DELTA_ANGLES:
 		player.delta_pitch = struct.unpack_from('<h',view[:2],0)[0]	
 		view=view[2:]
+		player.delta_yaw = struct.unpack_from('<h',view[:2],0)[0]
 		view=view[2:]
+		player.delta_roll = struct.unpack_from('<h',view[:2],0)[0]
 		view=view[2:]
 	# else:
 		# player.delta_pitch = 0

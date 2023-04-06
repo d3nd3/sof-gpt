@@ -16,5 +16,13 @@ def pretty_dump(data):
 
 
 def say(player,msg):
-	player.conn.send(True, (f"\x04say {msg}\x00").encode('latin_1'))
+	player.conn.append_string_to_reliable(f"\x04say {msg}\x00")
 
+
+def changeTextColor(player,newColor):
+	c = player.userinfo["name"]
+	player.userinfo["name"] = c[:-1] + newColor
+
+
+def str_to_byte(str):
+	return str.encode("latin-1")
