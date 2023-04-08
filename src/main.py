@@ -2,7 +2,30 @@ from sof.client import SofClient
 
 import sys
 
+from sof.packets.raw import COM_BlockSequenceCRCByte
+
+
+def hex_string_to_bytearray(hex_string):
+	hex_list = hex_string.split()
+	byte_list = [int(x, 16) for x in hex_list]
+	return bytearray(byte_list)
+
+
+def test_checksum():
+	# seq = int(sys.argv[1])
+	# data = bytearray(sys.argv[2].encode("latin-1"))
+
+	seq = 103
+	data = hex_string_to_bytearray("13 00 00 00 01 20 00 05 00 fa 17 c0 42 11 00 00 f0 47 00 08 40 01 80 fe 05 b0 50 04 00 00 fc 11 00 02 50 00 a0 7f 01 2c 14 01 00 00 7f")
+	print(f"seq : {seq}\ndata : {data}")
+
+	blossom = COM_BlockSequenceCRCByte(data,seq);
+	print(f"blossom is {hex(blossom)}")	
+	sys.exit(0)
+
 if __name__ == "__main__":
+	# test_checksum()
+
 	ip = sys.argv[1]
 	port = sys.argv[2]
 	name = sys.argv[3]

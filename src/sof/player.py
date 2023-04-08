@@ -10,6 +10,8 @@ import sof.packets.types as types
 
 from sof.packets.defines import *
 
+import util
+
 class UserCmd:
 	def __init__(self):
 		# roll
@@ -199,6 +201,9 @@ class Player:
 		blossom = COM_BlockSequenceCRCByte(buffer2[move_start+2:],self.conn.our_seq);
 		# print(f'blossom is {blossom}\n')
 		buffer2[1] = blossom
+
+		util.pretty_dump(buffer2[move_start+2:])
+		print(f"seq was {self.conn.our_seq} and blossom is {hex(blossom)}")
 
 		# THUS :clc_move is unreliable
 		

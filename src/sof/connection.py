@@ -203,7 +203,6 @@ class Connection:
 		# add unreliable here
 		msg += unreliable_data
 
-
 		# print("--------------SENDING CONNECTED-----------------")
 		# pretty_dump(msg)
 
@@ -260,13 +259,15 @@ class Connection:
 					self.player.mapname = msg[pos:].split(b'.',1)[0].decode("latin_1")
 					print (self.player.mapname)
 					self.expectmapname = False
+			# iterating 1 packet
 			while view:
 				# print(view.nbytes)
+
 				cmd = struct.unpack_from('<B',view,0)[0]
-				# print(f"---------PARSING PACKET : {packetIDtoName(cmd)}")
 				view = view[1:]
 
 				pname = packetIDtoName(cmd)
+				print(f"---------PARSING PACKET : {pname}")
 				if pname is None:
 					# completely unrecognized packet
 					break
