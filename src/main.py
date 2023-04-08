@@ -1,8 +1,11 @@
 from sof.client import SofClient
 
 import sys
+import time
 
 from sof.packets.raw import COM_BlockSequenceCRCByte
+
+import pygame
 
 
 def hex_string_to_bytearray(hex_string):
@@ -23,6 +26,7 @@ def test_checksum():
 	print(f"blossom is {hex(blossom)}")	
 	sys.exit(0)
 
+
 if __name__ == "__main__":
 	# test_checksum()
 
@@ -33,6 +37,11 @@ if __name__ == "__main__":
 
 	client = SofClient()
 
+	pygame.init()
+	screen = pygame.display.set_mode((600, 600))
+
+	
+	# name and predicting overriden inside player.py
 	userinfo = {
 		"predicting"			: "1",
 		"spectator_password" 	: "specme",
@@ -45,7 +54,8 @@ if __name__ == "__main__":
 		"msg"					: "0",
 		"rate"					: "15000",
 		"allow_download_models" : "1",
-		"team_red_blue"			: "0"
+		"team_red_blue"			: "0",
+		"bestweap"				: "safe"
 	}
 	
 	# endpoints store players
@@ -68,4 +78,7 @@ if __name__ == "__main__":
 	# client.addPlayerToEndpoint(endpoint,userinfo,name)
 
 	client.beginLoop()
+
+
+
 

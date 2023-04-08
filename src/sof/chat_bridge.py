@@ -79,14 +79,18 @@ class GPT_COMMANDS:
 
 	# OTHER
 	def plus_attack(p, data):
-		p.uc_now.buttonsPressed |= BUTTON_ATTACK
+		# p.uc_now.buttonsPressed |= BUTTON_ATTACK
+		p.uc_now.fireEvent = 1.0
 	def minus_attack(p, data):
-		p.uc_now.buttonsPressed &= ~BUTTON_ATTACK
+		# p.uc_now.buttonsPressed &= ~BUTTON_ATTACK
+		p.uc_now.fireEvent = 0.0
 
 	def plus_altattack(p, data):
-		p.uc_now.buttonsPressed |= BUTTON_ALTATTACK
+		# p.uc_now.buttonsPressed |= BUTTON_ALTATTACK
+		p.uc_now.altFireEvent = 1.0
 	def minus_altattack(p, data):
-		p.uc_now.buttonsPressed &= ~BUTTON_ALTATTACK
+		# p.uc_now.buttonsPressed &= ~BUTTON_ALTATTACK
+		p.uc_now.altFireEvent = 0.0
 
 	def plus_use(p, data):
 		p.uc_now.buttonsPressed |= BUTTON_ACTION
@@ -105,6 +109,12 @@ class GPT_COMMANDS:
 		if delay >= 0 and delay <= 100:
 			p.main.gpt["scaled_delay"] = delay
 			util.say(p,f"scaled_delay is now {delay}")
+
+	def predicting(p, data):
+		predicting = int(data)
+		if predicting == 0 or predicting == 1:
+			p.setPredicting(predicting)
+			util.say( p ,  f"predicting is now {p.isPredicting}" )
 
 	def forward_speed(p, data):
 		update = int(data)
@@ -205,6 +215,8 @@ gpt_commands = {
 	# settings
 	"base_delay": (lambda p, data: GPT_COMMANDS.base_delay(p, data)),
 	"scaled_delay": (lambda p, data: GPT_COMMANDS.scaled_delay(p, data)),
+
+	"predicting": (lambda p, data: GPT_COMMANDS.predicting(p, data)),
 
 	"forward_speed": (lambda p, data: GPT_COMMANDS.forward_speed(p, data)),
 

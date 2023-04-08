@@ -41,7 +41,7 @@ class UserCmd:
 		self.leanLeft = False
 		self.leanRight = False
 
-		self.buttonsPressed = 0
+		self.buttonsPressed = BUTTON_RUN
 		self.shoot = False
 		self.fireEvent = False
 		self.altFireEvent = False
@@ -57,6 +57,10 @@ class UserCmd:
 		self.pitch_before = 0
 		self.roll_before = 0
 
+		self.fire_before = 0
+		self.buttons_before = 0
+
+		self.dead = False
 
 
 # This now represents everything
@@ -76,14 +80,16 @@ class Player:
 		self.init = False
 		self.endpoint = endpoint
 
+		self.isPredicting = True
+
 		# 9999 special value to say, don't use custom pitch
 		self.custom_pitch = 9999
 		self.custom_yaw = 9999
 		self.custom_roll = 9999
 
-		self.pitch_speed = 10
-		self.yaw_speed = 10
-		self.roll_speed = 10
+		self.pitch_speed = 15
+		self.yaw_speed = 15
+		self.roll_speed = 15
 
 		self.delta_pitch = 0
 		self.delta_yaw = 0
@@ -91,19 +97,25 @@ class Player:
 
 		self.forward_speed = 100
 
-		self.burst = False
 
-		self.mode = False
+		# Internal to firing mechanics
+		self.internal_allowed_to_fire = 2
+		self.internal_allowed_to_fire_basic = True
+		self.internal_allowed_to_fire_timer = time.time()
+		self.internal_allowed_to_fire2 = True
 
 		self.uc_now = UserCmd()
 
-		self.usercmd = [ {"buffer":bytearray(64),"bit_length": 0} for i in range(0,2) ]
-
+		# userinfo dict creation
 		self.textColor = P_GREEN
 		# use player.make_userinfo to return the slash seperated string form.
 		userinfo["name"] = name + self.textColor
 		self.userinfo = userinfo
-		self.past_userinfo = userinfo
+		self.past_userinfo = self.userinfo.copy()
+
+		# depends on userinfo
+		self.setPredicting(self.isPredicting)
+
 
 	def initialize(self):
 		self.init = True
@@ -125,6 +137,14 @@ class Player:
 		
 		return True
 
+	def setPredicting(self,val):
+		if val:
+			self.isPredicting = True
+			self.userinfo["predicting"] = "1"
+		else:
+			self.isPredicting = False
+			self.userinfo["predicting"] = "0"
+
 	def make_userinfo(self):
 		d = self.userinfo
 		s = ""
@@ -132,6 +152,7 @@ class Player:
 		for key, value in d.items():
 			s += '\\' + key + '\\' + value
 		# s+= "\""
+		print(f"user info length is currently : {len(s)}")
 		return s
 		
 
@@ -167,18 +188,19 @@ class Player:
 			ui = self.make_userinfo()
 			print(f"Updating userinfo!\nshow\n{ui}")
 			buffer2 += (f"{types.CLC_USERINFO}{ui}\x00").encode('latin_1')
-		self.past_userinfo = self.userinfo.copy()
+
+			self.past_userinfo = self.userinfo.copy()
 		
 		# CLC_MOVE
 		move_start = len(buffer2)
 		buffer2 += bytearray.fromhex('02 00 FF FF FF FF')
 		# fill the 'buffer'
 
-		written_buffer = bytearray(64)
+		written_buffer = bytearray(128)
 		written_bytes = completeUserCommandBitBuffer(self,written_buffer);
 		
 		buffer2 += written_buffer[:written_bytes]
-		self.mode = not self.mode
+		
 		# update lastServerFrame
 		if self.lastServerFrame == -1:
 			struct.pack_into('<i',buffer2,move_start+2,self.lastServerFrame);

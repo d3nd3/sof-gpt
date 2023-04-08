@@ -7,6 +7,10 @@ import time
 
 from sof.packets.defines import *
 
+import sof.keys
+
+import pygame
+
 # this class represents the entire tool.
 # ideally handles multiple connections
 # and ideally there can be multiple players to a connection
@@ -63,10 +67,14 @@ class SofClient:
 						continue
 				c = player.conn
 				c.recv()
-
+				# TODO: THERE IS BUG ON SOME MAPS THAT START PACKET WITH SVC_TMP_ENTITY
+				
+				sof.keys.process(player)
 
 				# send usercmds if connected
 				player.moveAndSend()
+
+				pygame.display.update()
 				
 				# sends heartbeat 50 times a second
 				if c.connected == 2:

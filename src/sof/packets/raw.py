@@ -1,5 +1,6 @@
 import struct
 import hashlib
+import time
 from sof.packets.defines import *
 
 yaw = 2047;
@@ -9,118 +10,6 @@ one = bytes((1,))
 zero = bytes((0,))
 
 bitpos = 0
-
-
-def copy_bits2(src: bytearray, dst: bytearray, src_bitpos: int, dst_bitpos: int, num_bits: int) -> None:
-	"""
-	Copies specified number of bits from source to destination byte arrays starting from specified bit positions.
-	
-	Parameters:
-	src (bytearray): The source byte array to copy bits from.
-	dst (bytearray): The destination byte array to copy bits to.
-	src_bitpos (int): The bit position in source byte array to start copying bits from.
-	dst_bitpos (int): The bit position in destination byte array to start copying bits to.
-	num_bits (int): The number of bits to copy.
-	
-	Returns:
-	None
-	"""
-	for i in range(num_bits):
-		src_byte_index = (src_bitpos + i) // 8
-		src_bit_index = (src_bitpos + i) % 8
-		src_bit_value = (src[src_byte_index] >> (7 - src_bit_index)) & 1
-		
-		dst_byte_index = (dst_bitpos + i) // 8
-		dst_bit_index = (dst_bitpos + i) % 8
-		dst_bit_value = (dst[dst_byte_index] >> (7 - dst_bit_index)) & 1
-		
-		dst[dst_byte_index] &= ~(1 << (7 - dst_bit_index))
-		dst[dst_byte_index] |= (src_bit_value << (7 - dst_bit_index))
-
-def copy_bits3(src: bytearray, dst: bytearray, src_bitpos: int, dst_bitpos: int, num_bits: int) -> None:
-	"""
-	Copies `num_bits` bits from the `src` bytearray starting at bit position `src_bitpos` to the `dst` bytearray
-	starting at bit position `dst_bitpos`.
-	
-	:param src: the source bytearray
-	:param dst: the destination bytearray
-	:param src_bitpos: the starting bit position in the source bytearray (0-indexed)
-	:param dst_bitpos: the starting bit position in the destination bytearray (0-indexed)
-	:param num_bits: the number of bits to copy
-	:return: None
-	"""
-	for i in range(num_bits):
-		src_bytepos = (src_bitpos + i) // 8
-		src_bitpos_in_byte = (src_bitpos + i) % 8
-		dst_bytepos = (dst_bitpos + i) // 8
-		dst_bitpos_in_byte = (dst_bitpos + i) % 8
-		
-		src_byte = src[src_bytepos]
-		src_bit = (src_byte >> (7 - src_bitpos_in_byte)) & 0x01
-		dst_byte = dst[dst_bytepos]
-		if src_bit:
-			dst_byte |= (0x01 << (7 - dst_bitpos_in_byte))
-		else:
-			dst_byte &= ~(0x01 << (7 - dst_bitpos_in_byte))
-		dst[dst_bytepos] = dst_byte
-
-def copy_bits4(src: bytearray, dst: bytearray, src_bitpos: int, dst_bitpos: int, num_bits: int) -> None:
-	"""
-	Copy bits from src bytearray to dst bytearray.
-	
-	Args:
-		src (bytearray): source bytearray to copy bits from
-		dst (bytearray): destination bytearray to copy bits to
-		src_bitpos (int): starting bit position in the src bytearray
-		dst_bitpos (int): starting bit position in the dst bytearray
-		num_bits (int): number of bits to copy
-	
-	Returns:
-		None
-	"""
-	# Compute the byte and bit offset for the src and dst
-	src_bytepos, src_bitoffset = divmod(src_bitpos, 8)
-	dst_bytepos, dst_bitoffset = divmod(dst_bitpos, 8)
-	
-	# Copy the bits from the src to the dst
-	for i in range(num_bits):
-		# Get the current bit from the src bytearray
-		src_byte = src[src_bytepos]
-		src_bit = (src_byte >> (7 - src_bitoffset)) & 1
-		
-		# Copy the current bit to the dst bytearray
-		dst_byte = dst[dst_bytepos]
-		if src_bit:
-			dst_byte |= (1 << (7 - dst_bitoffset))
-		else:
-			dst_byte &= ~(1 << (7 - dst_bitoffset))
-		dst[dst_bytepos] = dst_byte
-		
-		# Move to the next bit position in the src and dst bytearrays
-		src_bitoffset += 1
-		if src_bitoffset == 8:
-			src_bytepos += 1
-			src_bitoffset = 0
-			
-		dst_bitoffset += 1
-		if dst_bitoffset == 8:
-			dst_bytepos += 1
-			dst_bitoffset = 0
-
-
-def copy_bits(src: bytearray, dst : bytearray , src_bitpos: int, dst_bitpos: int, num_bits: int) -> None:
-	for i in range(num_bits):
-		src_byte = src[src_bitpos // 8]
-		dst_byte = dst[dst_bitpos // 8]
-		src_mask = 1 << (src_bitpos % 8)
-		dst_mask = 1 << (dst_bitpos % 8)
-		if src_byte & src_mask:
-			dst[dst_bitpos // 8] = dst_byte | dst_mask
-		else:
-			dst[dst_bitpos // 8] = dst_byte & ~dst_mask
-		src_bitpos += 1
-		dst_bitpos += 1
-
 
 # out_bytearray, in_bytearray, in_bits
 def dataToBits(stream, indata, bits, nosign=True):
@@ -159,7 +48,7 @@ def dataToBits(stream, indata, bits, nosign=True):
 
 # moveUp is less.
 def tenbit(n):
-	n = n * 0.01 * 510
+	# n = n * 0.01 * 510
 	return 510 + int(n)
 
 def simpleDeltaUsercmd(player,bitbuffer):
@@ -236,15 +125,20 @@ def simpleDeltaUsercmd(player,bitbuffer):
 # 163 bits
 # 20 bytes remainder 3
 # 21 bytes
+
+
+# TODO : CANNOT MOVE DIAGONALLY.
 def deltaUsercmd(player,bitbuffer):
 
 	bits_written = 0
-	generalMoveSpeed = player.forward_speed
+
+	time_now = time.time()
 
 	state = player.uc_now
-
 	d = bytearray(4)
-	
+
+	# will compare state.before with state.now
+
 	if state.lookUp:
 		state.pitch -= player.pitch_speed
 		if state.pitch < -2048 :
@@ -259,7 +153,7 @@ def deltaUsercmd(player,bitbuffer):
 
 	# this this causes bug for player assume always have to send?
 	# if state.pitch_before != state.pitch:
-		# changed
+	# changed
 	network_pitch = state.pitch - (player.delta_pitch // 16)
 	if network_pitch < -2048:
 		network_pitch += 4096
@@ -269,8 +163,6 @@ def deltaUsercmd(player,bitbuffer):
 	bits_written += dataToBits(bitbuffer,one,1)
 	struct.pack_into('<h',d,0,network_pitch)
 	bits_written += dataToBits(bitbuffer,d,12)
-
-	state.pitch_before = state.pitch
 	# else:
 	# 	bits_written += dataToBits(bitbuffer,zero,1)
 
@@ -301,8 +193,9 @@ def deltaUsercmd(player,bitbuffer):
 	bits_written += dataToBits(bitbuffer,one,1)
 	struct.pack_into('<h',d,0,network_yaw)
 	bits_written += dataToBits(bitbuffer,d,12)
-	state.yaw_before = state.yaw
+	
 	# else:
+	# 	# this resets aim? == bad?
 	# 	bits_written += dataToBits(bitbuffer,zero,1)
 	# 
 	# **************************ROLL*********************************
@@ -331,7 +224,6 @@ def deltaUsercmd(player,bitbuffer):
 	bits_written += dataToBits(bitbuffer,one,1)
 	struct.pack_into('<h',d,0,network_roll)
 	bits_written += dataToBits(bitbuffer,d,12)
-	state.roll_before = state.roll
 	# else:
 	# 	bits_written += dataToBits(bitbuffer,zero,1)
 	# 
@@ -339,13 +231,16 @@ def deltaUsercmd(player,bitbuffer):
 	# 
 	if state.moveBack:
 		bits_written += dataToBits(bitbuffer,one,1)
-		struct.pack_into('<H',d,0,tenbit(-1 * generalMoveSpeed))
+		struct.pack_into('<H',d,0,tenbit(-200))
+		# struct.pack_into('<h',d,0,-200)
 		bits_written += dataToBits(bitbuffer,d,10)
 	elif state.moveForward:
 		bits_written += dataToBits(bitbuffer,one,1)
-		struct.pack_into('<H',d,0,tenbit(generalMoveSpeed))
+		struct.pack_into('<H',d,0,tenbit(200))
+		# struct.pack_into('<h',d,0,200)
 		bits_written += dataToBits(bitbuffer,d,10)
 	else:
+		# IMPORTANT TO INIT CHARACTER CORRECTLY (REFUSES TO MOVE + INVIS)
 		bits_written += dataToBits(bitbuffer,zero,1)
 		# bits_written += dataToBits(bitbuffer,one,1)
 		# struct.pack_into('<H',d,0,tenbit(0))
@@ -357,57 +252,83 @@ def deltaUsercmd(player,bitbuffer):
 	if state.moveLeft:
 		# optional
 		bits_written += dataToBits(bitbuffer,one,1)
-		struct.pack_into('<H',d,0,tenbit(-1 * generalMoveSpeed))
+		struct.pack_into('<H',d,0,tenbit(-160))
+		# struct.pack_into('<h',d,0,-160)
 		# non-optional
 		bits_written += dataToBits(bitbuffer,d,10)
 	elif state.moveRight:
 		# optional
 		bits_written += dataToBits(bitbuffer,one,1)
-		struct.pack_into('<H',d,0,tenbit(generalMoveSpeed))
+		struct.pack_into('<H',d,0,tenbit(160))
+		# struct.pack_into('<h',d,0,160)
 		# non-optional
 		bits_written += dataToBits(bitbuffer,d,10)
 	else:
-		# non-optional
+		# THIS IS IMPORTANT TO INIT THE CHARACTER CORRECTLY (REFUSES TO MOVE + INVIS)
 		bits_written += dataToBits(bitbuffer,zero,1)
 		# bits_written += dataToBits(bitbuffer,one,1)
 		# struct.pack_into('<H',d,0,tenbit(0))
 		# bits_written += dataToBits(bitbuffer,d,10)
+		
 
 	# /*
 	# **************************UPMOVE*********************************
 	# */ I believe this -160 -> 160
 	if state.moveUp:
 		bits_written += dataToBits(bitbuffer,one,1)
-		struct.pack_into('<H',d,0,tenbit(generalMoveSpeed))
+		struct.pack_into('<H',d,0,tenbit(200))
+		# struct.pack_into('<h',d,0,200)
 		bits_written += dataToBits(bitbuffer,d,10)
 	elif state.moveDown:
 		bits_written += dataToBits(bitbuffer,one,1)
-		struct.pack_into('<H',d,0,tenbit(-1 * generalMoveSpeed))
+		# struct.pack_into('<h',d,0,-200)
+		struct.pack_into('<H',d,0,tenbit(-200))
 		bits_written += dataToBits(bitbuffer,d,10)
 	else:
-		# upmove requires this else the player doesnt obey gravity correctly glitch on spawn?
 		bits_written += dataToBits(bitbuffer,one,1)
 		struct.pack_into('<H',d,0,tenbit(0))
 		bits_written += dataToBits(bitbuffer,d,10)
 
-		# player cant move?
+		# player always running ( never lands ) == bad
 		# bits_written += dataToBits(bitbuffer,zero,1)
 
+	# using fireEvent as the control variable for firing
+	# NON-PREDICTING FIRE
+	# if not player.isPredicting
+	"""
+		If you don't send 1 frame of not attacking for every
+		attack, it will give bad checksum.
+	"""
+	
+	# always turn this off?
+	state.buttonsPressed &= ~BUTTON_ATTACK
+	# only touch BUTTON_ATTACK when predicting is off
+	if not player.isPredicting:
+		if state.fireEvent and player.internal_allowed_to_fire_basic:
+			state.buttonsPressed |= BUTTON_ATTACK
+			player.internal_allowed_to_fire_basic = False
+		else:
+			player.internal_allowed_to_fire_basic = True
+			
+	else:
+		# predicting death respawn
+		if state.dead >= 2:
+			state.dead -= 1
+			if state.dead % 2 == 0:
+				state.buttonsPressed |= BUTTON_ATTACK
+			else:
+				state.buttonsPressed &= ~BUTTON_ATTACK
+
+
 	# BUTTONS
-	if state.fireEvent:
-		# dataToBits(append_bitbuffer,zero,1)
-		state.buttonsPressed |= BUTTON_USE
+	if state.buttonsPressed:
 		bits_written += dataToBits(bitbuffer,one,1)
 		b = bytes((state.buttonsPressed,))
 		bits_written += dataToBits(bitbuffer,b,8)
 	else:
-		state.buttonsPressed &= ~BUTTON_USE
-		
-		bits_written += dataToBits(bitbuffer,one,1)
-		b = bytes((state.buttonsPressed,))
-		bits_written += dataToBits(bitbuffer,b,8)
+		bits_written += dataToBits(bitbuffer,zero,1)
 
-	# LEAN
+	# LEAN - reduces msec by 1 bit when active
 	if state.leanLeft:
 		bits_written += dataToBits(bitbuffer,one,1)
 		bits_written += dataToBits(bitbuffer,zero,1)
@@ -418,38 +339,63 @@ def deltaUsercmd(player,bitbuffer):
 		bits_written += dataToBits(bitbuffer,zero,1)
 	
 
+	# [But][Lean][Light][Msec][FF][5?]
 	# /*
 	# **************************LIGHTLEVEL*********************************
 	# */
 	# lightlevel - used for visibility a.i of computer to target you?
+
+
 	bits_written += dataToBits(bitbuffer,one,1)
-	state.lightLevel = 5
+	state.lightLevel = 20
 	b = bytes((state.lightLevel,))
 	bits_written += dataToBits(bitbuffer,b,5)
 
-	# MSEC IS UNIQUE, NO TICK FOR IT FORCED.
 	b = bytes((state.msec,))
 	bits_written += dataToBits(bitbuffer,b,8)
-
-	# if state.fireEvent:
-	# player.forwardspeed
 	
-	# if state.fireEvent:
-	# state.fireEvent = False
-	# bits_written += dataToBits(bitbuffer,one,1)
-	# struct.pack_into('<f',d,0,1.0)
-	# bits_written += dataToBits(bitbuffer,d,32)
-	# else:utest
-	bits_written += dataToBits(bitbuffer,zero,1)
+	"""
+	Seems they control the rate of fire by not allowing you to fire 2 consecutive packets
+	Lets simulate fast toggle then
+	"""
+	if player.isPredicting and state.fireEvent and player.internal_allowed_to_fire >= 2:
+	# if player.isPredicting and state.fireEvent and time_now - player.internal_allowed_to_fire_timer > 0.1:
+		# want to fire
+		val = 1.0
+		bits_written += dataToBits(bitbuffer,one,1)
+		struct.pack_into('<f',d,0,val)
+		bits_written += dataToBits(bitbuffer,d,32)
+		# player.internal_allowed_to_fire_timer = time.time()
+		player.internal_allowed_to_fire = 0
+	# do not want to fire or not allowed to fire
+	else:
+		# 2 frames inactive
+		player.internal_allowed_to_fire += 1
+		bits_written += dataToBits(bitbuffer,zero,1)
+		
+	if player.isPredicting and state.altFireEvent and player.internal_allowed_to_fire2:
+		# state.fireEvent forced to default 0.0 every frame
+		
+		val = 1.0
+		bits_written += dataToBits(bitbuffer,one,1)
+		struct.pack_into('<f',d,0,val)
+		bits_written += dataToBits(bitbuffer,d,32)
+		player.internal_allowed_to_fire2 = False
+	else:
+		player.internal_allowed_to_fire2 = True
+		bits_written += dataToBits(bitbuffer,zero,1)
 
-	# if state.altFireEvent:
-	# bits_written += dataToBits(bitbuffer,one,1)
-	# struct.pack_into('<I',d,0,1)
-	# bits_written += dataToBits(bitbuffer,d,32)
-	# else:
-	bits_written += dataToBits(bitbuffer,zero,1)
+	# QUESTION OF WHETHER IT EXPECTS TOGGLE BEHAVIOR
+	# if fireEvent is a toggle, no need for before check
+	# state.fire_before = state.fireEvent
+	# state.fireEvent = 0.0
 
-	# print(f"bits_written = {bits_written}")
+	state.pitch_before = state.pitch
+	state.yaw_before = state.yaw
+	state.roll_before = state.roll
+
+	state.fire_before = state.fireEvent
+	state.buttons_before = state.buttonsPressed
 
 	return bits_written
 
@@ -459,37 +405,11 @@ def completeUserCommandBitBuffer(player,return_buffer):
 	global bitpos
 	bitpos = 0
 
-	# if player.usercmd[1] == 0:
-	# 	player.usercmd[1]["bit_length"] = simpleDeltaUsercmd(player,return_buffer)
-	# else:
-	# 1 = OLDEST -2
-	# copies past buffers into output
-	copy_bits(player.usercmd[1]["buffer"],return_buffer,0,bitpos,player.usercmd[1]["bit_length"])
-	bitpos += player.usercmd[1]["bit_length"]
-
-	# if player.usercmd[0] == 0:
-	# 	player.usercmd[0]["bit_length"] = simpleDeltaUsercmd(player,return_buffer)
-	# else:
-	# 0 = LESS OLD -1
-	copy_bits(player.usercmd[0]["buffer"],return_buffer,0,bitpos,player.usercmd[0]["bit_length"])
-	bitpos += player.usercmd[0]["bit_length"]
-
-	bitpos_before = bitpos
-	# global bitpos handles the absolute write position.
+	bitpos_now = bitpos
 	bits = deltaUsercmd(player,return_buffer)
-	# bits = deltaUsercmd(player,return_buffer)
-	# bits = deltaUsercmd(player,return_buffer)
+	bits = deltaUsercmd(player,return_buffer)
+	bits = deltaUsercmd(player,return_buffer)
 
-	# update past buffers for next frame
-	
-	# COPY OLDER into OLDEST
-	copy_bits(player.usercmd[0]["buffer"],player.usercmd[1]["buffer"],0,0,player.usercmd[0]["bit_length"])
-	player.usercmd[1]["bit_length"] = player.usercmd[0]["bit_length"]
-
-	# COPY NOW INTO OLDER
-	copy_bits(return_buffer,player.usercmd[0]["buffer"],bitpos_before,0,bits)
-	player.usercmd[0]["bit_length"] = bits
-	
 	# bytesWritten = (bitpos+7)//8
 	bytesWritten = bitpos//8
 	# print(f"BYTES WRITTEN = {bytesWritten}")

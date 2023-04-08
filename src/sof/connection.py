@@ -242,14 +242,11 @@ class Connection:
 				pass
 
 			
-
 			view,ret = self.netchan_process(view)
 			if ret == False:
 				# discard stale or duplicate packet
 				print("Discarding.")
 				continue
-
-			
 
 			# there are many commands inside 1 packet
 			# if you cannot parse 1 packet, you can't parse the others.
