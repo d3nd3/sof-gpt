@@ -144,7 +144,7 @@ class GPT_COMMANDS:
 		p.main.gpt["chunks"] = []
 
 	def kill(p, data):
-		util.say(p,"kill")
+		p.conn.append_string_to_reliable(f"{CLC_STRINGCMD}kill\x00")
 
 	def test(p, data):
 		util.say(p,"test")
@@ -222,7 +222,7 @@ gpt_commands = {
 	"kill": (lambda p, data: GPT_COMMANDS.kill(p, data)),
 	"skin": (lambda p, data: GPT_COMMANDS.skin(p, data)),
 	"stop": (lambda p, data: GPT_COMMANDS.stop(p, data)),
-	# "quit": (lambda p, data: GPT_COMMANDS.quit(p, data)),
+	"quit": (lambda p, data: GPT_COMMANDS.quit(p, data)),
 }
 
 def interact(msg,player):

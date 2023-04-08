@@ -202,8 +202,8 @@ class Player:
 		# print(f'blossom is {blossom}\n')
 		buffer2[1] = blossom
 
-		util.pretty_dump(buffer2[move_start+2:])
-		print(f"seq was {self.conn.our_seq} and blossom is {hex(blossom)}")
+		# util.pretty_dump(buffer2[move_start+2:])
+		# print(f"seq was {self.conn.our_seq} and blossom is {hex(blossom)}")
 
 		# THUS :clc_move is unreliable
 		

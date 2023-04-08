@@ -267,7 +267,7 @@ class Connection:
 				view = view[1:]
 
 				pname = packetIDtoName(cmd)
-				print(f"---------PARSING PACKET : {pname}")
+				# print(f"---------PARSING PACKET : {pname}")
 				if pname is None:
 					# completely unrecognized packet
 					break
