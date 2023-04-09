@@ -91,7 +91,7 @@ class SofClient:
 						self.connectedCount -=1
 						print(f"DISCONNECTED: New Total : {self.connectedCount}")
 
-				if time.time() - player.conn.last_packet_stamp > 5.0:
+				if time.time() - player.conn.last_packet_stamp > 15.0:
 					print("auto die no packet")
 					player.init = False
 					player.conn.last_packet_stamp = time.time()

@@ -52,11 +52,12 @@ if __name__ == "__main__":
 		"teamname"				: "Ministry of Sin",
 		"fov"					: "95",
 		"msg"					: "0",
-		"rate"					: "15000",
+		"rate"					: "25000",
 		"allow_download_models" : "1",
 		"team_red_blue"			: "0",
 		"bestweap"				: "safe"
 	}
+
 	
 	# endpoints store players
 	# connection is just a class that stores socket and funcs for the socket

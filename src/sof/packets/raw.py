@@ -51,29 +51,35 @@ def tenbit(n):
 	# n = n * 0.01 * 510
 	return 510 + int(n)
 
+# [But][Lean][Light][Msec][FF]
 def simpleDeltaUsercmd(player,bitbuffer):
 	bits_written = 0
+	d = bytearray(4)
 
-	bits_written += dataToBits(append_bitbuffer,zero,1)
-	bits_written += dataToBits(append_bitbuffer,zero,1)
-	bits_written += dataToBits(append_bitbuffer,zero,1)
+	bits_written += dataToBits(bitbuffer,zero,1)
+	bits_written += dataToBits(bitbuffer,zero,1)
+	bits_written += dataToBits(bitbuffer,zero,1)
 
-	bits_written += dataToBits(append_bitbuffer,zero,1)
-	bits_written += dataToBits(append_bitbuffer,zero,1)
-	bits_written += dataToBits(append_bitbuffer,zero,1)
+	bits_written += dataToBits(bitbuffer,zero,1)
+	bits_written += dataToBits(bitbuffer,zero,1)
+
+	# upmove
+	bits_written += dataToBits(bitbuffer,one,1)
+	struct.pack_into('<H',d,0,tenbit(0))
+	bits_written += dataToBits(bitbuffer,d,10)
 
 	# buttons,lean,light
-	bits_written += dataToBits(append_bitbuffer,one,1)
-	bits_written += dataToBits(append_bitbuffer,zero,8)
-	bits_written += dataToBits(append_bitbuffer,zero,1)
-	bits_written += dataToBits(append_bitbuffer,zero,1)
+	bits_written += dataToBits(bitbuffer,one,1)
+	bits_written += dataToBits(bitbuffer,zero,8)
+	bits_written += dataToBits(bitbuffer,zero,1)
+	bits_written += dataToBits(bitbuffer,zero,1)
 
 	# msec
-	bits_written += dataToBits(append_bitbuffer,bytes((20,)),8)
+	bits_written += dataToBits(bitbuffer,bytes((20,)),8)
 
 	# prediction_fire
-	bits_written += dataToBits(append_bitbuffer,zero,1)
-	bits_written += dataToBits(append_bitbuffer,zero,1)
+	bits_written += dataToBits(bitbuffer,zero,1)
+	bits_written += dataToBits(bitbuffer,zero,1)
 
 	return bits_written
 
@@ -126,12 +132,21 @@ def simpleDeltaUsercmd(player,bitbuffer):
 # 20 bytes remainder 3
 # 21 bytes
 
+# [But][Lean][Light][Msec][FF]
+# TODO : CANNOT MOVE DIAGONALLY. FIXED : required ten(zero) instead of 0 AND roll 0?
+# TODO : MORE THAN 100 UNACKED DELTA FROM SERVER
+# TODO : RELIABLE SUICIDE BROKEN HIGH PING SERVER
 
-# TODO : CANNOT MOVE DIAGONALLY.
+
+# PREDICTION
+# "predicting" userinfo used to tell the server if we are using predicting or not.
+# cannot be changed during gameplay, must be set before connect.
+# probably is equivalent to cl_predict_weapon, used for weapon changing and clientside animations in general
+# When "predicting" is "1", server is allowing client to shoot using fireEvent float in usercmd_t
+# When "predicting" is "0", client must use BUTTON_ATTACK to attack.
 def deltaUsercmd(player,bitbuffer):
 
 	bits_written = 0
-
 	time_now = time.time()
 
 	state = player.uc_now
@@ -202,33 +217,34 @@ def deltaUsercmd(player,bitbuffer):
 	# */
 	# ROLL_ANGLE  -2047 -> 2047 AKA 0 -> 4095
 	
-	if state.rollRight:
-		state.roll -= player.roll_speed
-		if state.roll < -2048 :
-			state.roll += 4096
-	elif state.rollLeft:
-		state.roll += player.roll_speed
-		if state.roll > 2047:
-			state.roll -= 4096
+	# if state.rollRight:
+	# 	state.roll -= player.roll_speed
+	# 	if state.roll < -2048 :
+	# 		state.roll += 4096
+	# elif state.rollLeft:
+	# 	state.roll += player.roll_speed
+	# 	if state.roll > 2047:
+	# 		state.roll -= 4096
 
-	if player.custom_roll != 9999:
-		state.roll = player.custom_roll
+	# if player.custom_roll != 9999:
+	# 	state.roll = player.custom_roll
 
-	# if state.roll_before != state.roll:
-	network_roll = state.roll - (player.delta_roll // 16)
-	if network_roll < -2048:
-		network_roll += 4096
-	elif network_roll > 2047:
-		network_roll -= 4096
+	# # if state.roll_before != state.roll:
+	# network_roll = state.roll - (player.delta_roll // 16)
+	# if network_roll < -2048:
+	# 	network_roll += 4096
+	# elif network_roll > 2047:
+	# 	network_roll -= 4096
 
-	bits_written += dataToBits(bitbuffer,one,1)
-	struct.pack_into('<h',d,0,network_roll)
-	bits_written += dataToBits(bitbuffer,d,12)
+	# bits_written += dataToBits(bitbuffer,one,1)
+	# struct.pack_into('<h',d,0,network_roll)
+	# bits_written += dataToBits(bitbuffer,d,12)
 	# else:
-	# 	bits_written += dataToBits(bitbuffer,zero,1)
+	bits_written += dataToBits(bitbuffer,zero,1)
 	# 
 	# **************************FORWARDMOVE*********************************
 	# 
+
 	if state.moveBack:
 		bits_written += dataToBits(bitbuffer,one,1)
 		struct.pack_into('<H',d,0,tenbit(-200))
@@ -240,11 +256,15 @@ def deltaUsercmd(player,bitbuffer):
 		# struct.pack_into('<h',d,0,200)
 		bits_written += dataToBits(bitbuffer,d,10)
 	else:
+		
+		
+		# IMPORTANT TO MAKE MOVE CORRECTLY
+		bits_written += dataToBits(bitbuffer,one,1)
+		struct.pack_into('<H',d,0,tenbit(0))
+		bits_written += dataToBits(bitbuffer,d,10)
+		
 		# IMPORTANT TO INIT CHARACTER CORRECTLY (REFUSES TO MOVE + INVIS)
-		bits_written += dataToBits(bitbuffer,zero,1)
-		# bits_written += dataToBits(bitbuffer,one,1)
-		# struct.pack_into('<H',d,0,tenbit(0))
-		# bits_written += dataToBits(bitbuffer,d,10)
+		# bits_written += dataToBits(bitbuffer,zero,1)
 	
 	# /*
 	# **************************SIDEMOVE*********************************
@@ -265,10 +285,16 @@ def deltaUsercmd(player,bitbuffer):
 		bits_written += dataToBits(bitbuffer,d,10)
 	else:
 		# THIS IS IMPORTANT TO INIT THE CHARACTER CORRECTLY (REFUSES TO MOVE + INVIS)
-		bits_written += dataToBits(bitbuffer,zero,1)
+		# bits_written += dataToBits(bitbuffer,zero,1)
 		# bits_written += dataToBits(bitbuffer,one,1)
 		# struct.pack_into('<H',d,0,tenbit(0))
 		# bits_written += dataToBits(bitbuffer,d,10)
+
+		bits_written += dataToBits(bitbuffer,one,1)
+		struct.pack_into('<H',d,0,tenbit(0))
+		bits_written += dataToBits(bitbuffer,d,10)
+		
+		# bits_written += dataToBits(bitbuffer,zero,1)
 		
 
 	# /*
@@ -300,26 +326,15 @@ def deltaUsercmd(player,bitbuffer):
 		attack, it will give bad checksum.
 	"""
 	
-	# always turn this off?
+
 	state.buttonsPressed &= ~BUTTON_ATTACK
-	# only touch BUTTON_ATTACK when predicting is off
-	if not player.isPredicting:
-		if state.fireEvent and player.internal_allowed_to_fire_basic:
-			state.buttonsPressed |= BUTTON_ATTACK
-			player.internal_allowed_to_fire_basic = False
-		else:
-			player.internal_allowed_to_fire_basic = True
-			
+	# only touch BUTTON_ATTACK when predicting is off ( spam it in pred mode? why not ? auto-respawn harmless )
+	if ( state.fireEvent or player.isPredicting ) and player.internal_allowed_to_fire_basic:
+		state.buttonsPressed |= BUTTON_ATTACK
+		player.internal_allowed_to_fire_basic = False
 	else:
-		# predicting death respawn
-		if state.dead >= 2:
-			state.dead -= 1
-			if state.dead % 2 == 0:
-				state.buttonsPressed |= BUTTON_ATTACK
-			else:
-				state.buttonsPressed &= ~BUTTON_ATTACK
-
-
+		player.internal_allowed_to_fire_basic = True
+		
 	# BUTTONS
 	if state.buttonsPressed:
 		bits_written += dataToBits(bitbuffer,one,1)
@@ -339,7 +354,7 @@ def deltaUsercmd(player,bitbuffer):
 		bits_written += dataToBits(bitbuffer,zero,1)
 	
 
-	# [But][Lean][Light][Msec][FF][5?]
+	# [But][Lean][Light][Msec][FF]
 	# /*
 	# **************************LIGHTLEVEL*********************************
 	# */
@@ -385,11 +400,6 @@ def deltaUsercmd(player,bitbuffer):
 		player.internal_allowed_to_fire2 = True
 		bits_written += dataToBits(bitbuffer,zero,1)
 
-	# QUESTION OF WHETHER IT EXPECTS TOGGLE BEHAVIOR
-	# if fireEvent is a toggle, no need for before check
-	# state.fire_before = state.fireEvent
-	# state.fireEvent = 0.0
-
 	state.pitch_before = state.pitch
 	state.yaw_before = state.yaw
 	state.roll_before = state.roll
@@ -406,9 +416,13 @@ def completeUserCommandBitBuffer(player,return_buffer):
 	bitpos = 0
 
 	bitpos_now = bitpos
-	bits = deltaUsercmd(player,return_buffer)
-	bits = deltaUsercmd(player,return_buffer)
-	bits = deltaUsercmd(player,return_buffer)
+	
+	
+	# simpleDeltaUsercmd(player,return_buffer)
+	deltaUsercmd(player,return_buffer)
+	deltaUsercmd(player,return_buffer)
+	deltaUsercmd(player,return_buffer)
+	
 
 	# bytesWritten = (bitpos+7)//8
 	bytesWritten = bitpos//8

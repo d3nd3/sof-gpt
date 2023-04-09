@@ -187,7 +187,7 @@ class Player:
 		if self.userinfo != self.past_userinfo:
 			ui = self.make_userinfo()
 			print(f"Updating userinfo!\nshow\n{ui}")
-			buffer2 += (f"{types.CLC_USERINFO}{ui}\x00").encode('latin_1')
+			self.conn.append_string_to_reliable(f"{types.CLC_USERINFO}{ui}\x00")
 
 			self.past_userinfo = self.userinfo.copy()
 		

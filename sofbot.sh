@@ -1,12 +1,14 @@
 #!/bin/bash
 # xvfb-run
 
+#chin
+xvfb-run python3 src/main.py 54.39.52.55 28910 sofgpt
 
 #acadie
 # python3 src/main.py 142.68.186.241 28950 heretic
 
 # madrange
-python3 src/main.py 5.135.46.179 28910 blossom
+# python3 src/main.py 5.135.46.179 28910 blossom
 
 
 # brazil

@@ -12,6 +12,8 @@ import sys
 
 class GPT_COMMANDS:
 	
+	# INPUT
+	# -----------------------------------------------------------------------
 	# ROLL
 	def plus_rollleft(p, data):
 		p.uc_now.rollLeft = True
@@ -71,9 +73,9 @@ class GPT_COMMANDS:
 		p.uc_now.moveUp = True
 	def minus_moveup(p, data):
 		p.uc_now.moveUp = False
-	def plus_moveup(p, data):
+	def plus_movedown(p, data):
 		p.uc_now.moveDown = True
-	def minus_moveup(p, data):
+	def minus_movedown(p, data):
 		p.uc_now.moveDown = False
 
 
@@ -97,26 +99,44 @@ class GPT_COMMANDS:
 	def minus_use(p, data):
 		p.uc_now.buttonsPressed &= ~BUTTON_ACTION
 
+	def weaponselect(p, data):
+		weaponID = int(data)
+		p.conn.append_string_to_reliable(f"{CLC_STRINGCMD}weaponselect {weaponID}\x00")
 	# SETTINGS
+	# -----------------------------------------------------------------------
 	def base_delay(p, data):
+		if not len(data):
+			util.say(p, f"base_delay is {p.main.gpt['base_delay']}")
+			return
 		delay = int(data)
 		if delay >= 0 and delay <= 100:
 			p.main.gpt["base_delay"] = delay
 			util.say(p,f"base_delay is now {delay}")
 
 	def scaled_delay(p, data):
+		if not len(data):
+			util.say(p, f"scaled_delay is {p.main.gpt['scaled_delay']}")
+			return
 		delay = int(data)
 		if delay >= 0 and delay <= 100:
 			p.main.gpt["scaled_delay"] = delay
 			util.say(p,f"scaled_delay is now {delay}")
 
+	# Server does not allow you to set predicting 1 after connection
+	# But does allow you to turn it off
 	def predicting(p, data):
+		if not len(data):
+			util.say(p, f"predicting is {p.isPredicting}")
+			return
 		predicting = int(data)
 		if predicting == 0 or predicting == 1:
 			p.setPredicting(predicting)
 			util.say( p ,  f"predicting is now {p.isPredicting}" )
 
 	def forward_speed(p, data):
+		if not len(data):
+			util.say(p, f"forward_speed is {p.uc_now.forwardSpeed}")
+			return
 		update = int(data)
 		p.uc_now.forwardSpeed = update
 		util.say(p,f"forward_speed is now {update}")
@@ -134,22 +154,37 @@ class GPT_COMMANDS:
 		util.say(p,f"custom_roll is now {p.custom_roll}")
 
 	def pitch_speed(p,data):
+		if not len(data):
+			util.say(p, f"pitch_speed is {p.pitch_speed}")
+			return
+
 		p.pitch_speed = int(data)
 		util.say(p,f"pitch_speed is now {p.pitch_speed}")
 
 	def yaw_speed(p,data):
+		if not len(data):
+			util.say(p, f"yaw_speed is {p.yaw_speed}")
+			return
 		p.yaw_speed = int(data)
 		util.say(p,f"yaw_speed is now {p.yaw_speed}")
 
 	def roll_speed(p,data):
+		if not len(data):
+			util.say(p, f"roll_speed is {p.roll_speed}")
+			return
+
 		p.roll_speed = int(data)
 		util.say(p,f"roll_speed is now {p.roll_speed}")
 		
 	def skin(p, data):
+		if not len(data):
+			util.say(p, f"skin is {p.userinfo['skin']}")
+			return
 		p.userinfo["skin"] = data
 		util.say(p,f"skin is now {data}")
 
 	# COMMANDS
+	# -----------------------------------------------------------------------
 	def stop(p, data):
 		p.main.gpt["chunks"] = []
 
@@ -168,9 +203,7 @@ class GPT_COMMANDS:
 		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
 		sys.exit(0)
 
-
-gpt_commands = {
-	
+sof_chat_inputs = {
 	# angles
 	"+rollright": (lambda p, data: GPT_COMMANDS.plus_rollright(p, data)),
 	"-rollright": (lambda p, data: GPT_COMMANDS.minus_rollright(p, data)),
@@ -203,8 +236,7 @@ gpt_commands = {
 	"+movedown": (lambda p, data: GPT_COMMANDS.plus_movedown(p, data)),
 	"-movedown": (lambda p, data: GPT_COMMANDS.minus_movedown(p, data)),
 
-	# other
-	
+	# interactions
 	"+attack": (lambda p, data: GPT_COMMANDS.plus_attack(p, data)),
 	"-attack": (lambda p, data: GPT_COMMANDS.minus_attack(p, data)),
 	"+altattack": (lambda p, data: GPT_COMMANDS.plus_altattack(p, data)),
@@ -212,6 +244,18 @@ gpt_commands = {
 	"+use": (lambda p, data: GPT_COMMANDS.plus_use(p, data)),
 	"-use": (lambda p, data: GPT_COMMANDS.minus_use(p, data)),
 
+	"weaponselect": (lambda p, data: GPT_COMMANDS.weaponselect(p, data))
+}
+
+sof_chat_commands = {
+	"test": (lambda p, data: GPT_COMMANDS.test(p, data)),
+	"kill": (lambda p, data: GPT_COMMANDS.kill(p, data)),
+	"skin": (lambda p, data: GPT_COMMANDS.skin(p, data)),
+	"stop": (lambda p, data: GPT_COMMANDS.stop(p, data)),
+	"quit": (lambda p, data: GPT_COMMANDS.quit(p, data)),
+}
+
+sof_chat_settings = {
 	# settings
 	"base_delay": (lambda p, data: GPT_COMMANDS.base_delay(p, data)),
 	"scaled_delay": (lambda p, data: GPT_COMMANDS.scaled_delay(p, data)),
@@ -227,14 +271,6 @@ gpt_commands = {
 	"pitch_speed": (lambda p, data: GPT_COMMANDS.pitch_speed(p, data)),
 	"yaw_speed": (lambda p, data: GPT_COMMANDS.yaw_speed(p, data)),
 	"roll_speed": (lambda p, data: GPT_COMMANDS.roll_speed(p, data)),
-
-
-	#commands
-	"test": (lambda p, data: GPT_COMMANDS.test(p, data)),
-	"kill": (lambda p, data: GPT_COMMANDS.kill(p, data)),
-	"skin": (lambda p, data: GPT_COMMANDS.skin(p, data)),
-	"stop": (lambda p, data: GPT_COMMANDS.stop(p, data)),
-	"quit": (lambda p, data: GPT_COMMANDS.quit(p, data)),
 }
 
 def interact(msg,player):
@@ -245,13 +281,17 @@ def interact(msg,player):
 		if end > 0:
 			cmd = msg[1:end]
 			print(f"{cmd} command")
-			if cmd in gpt_commands:
-				gpt_commands[cmd](player,msg[end+1:])
+			if cmd in sof_chat_inputs:
+				sof_chat_inputs[cmd](player,msg[end+1:])
+			elif cmd in sof_chat_commands:
+				sof_chat_commands[cmd](player,msg[end+1:])
+			elif cmd in sof_chat_settings:
+				sof_chat_settings[cmd](player,msg[end+1:])
 	elif not len(main.gpt["chunks"]):
 		# not in a request?lets go
-		pass
-		# answer = gpt_ask(msg,main.talkToWorld)
-		# generate_chunks_gpt(main,answer)
+		# pass
+		answer = gpt_ask(msg,main.talkToWorld)
+		generate_chunks_gpt(main,answer)
 
 
 # split the gpt response into chunks that fit nicely into sof say

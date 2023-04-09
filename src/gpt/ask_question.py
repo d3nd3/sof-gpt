@@ -38,7 +38,7 @@ def contact(question,keep_alive_func=None):
 	# 		fix_hairline=True,
 	# 		)
 
-	driver.implicitly_wait(2)
+	driver.implicitly_wait(1.5)
 
 	# timeout is set to 2 seconds if can't find element
 	before = time.time()
@@ -49,9 +49,10 @@ def contact(question,keep_alive_func=None):
 			break
 		# NoSuchElementException
 		except:
-			if keep_alive_func:
-				keep_alive_func()
-		
+			pass
+		if keep_alive_func:
+			keep_alive_func()
+
 		if time.time() - before > 30:
 			print("Graceful exit, did not find element")
 			driver.quit()
@@ -70,7 +71,7 @@ def contact(question,keep_alive_func=None):
 			response = driver.find_element(By.CSS_SELECTOR,".prose")
 
 			# wait for it to grow to full size.
-			time.sleep(2)
+			time.sleep(1.5)
 
 			if not (len(response.text) > previous_length):
 				# output has not grown
@@ -80,8 +81,6 @@ def contact(question,keep_alive_func=None):
 
 			previous_length = len(response.text)
 
-			if keep_alive_func:
-				keep_alive_func()
 
 			if time.time() - before > 30:
 				print("----Graceful exit, did not find element----")
@@ -91,6 +90,8 @@ def contact(question,keep_alive_func=None):
 			# timeout or closed
 			pass
 
+		if keep_alive_func:
+			keep_alive_func()
 		# when it excepts, it uses the 2 sec timeout from driver.implicitly_wait(2)
 		# when it returns val, it uses the 1 sec sleep.
 
@@ -107,9 +108,13 @@ def contact(question,keep_alive_func=None):
 			# print("---clicked twice----")
 		except:
 			print("----inner cannot find that nav----")
+			if keep_alive_func:
+				keep_alive_func()
 			
 	except:
 		print("----canot find that nav----")
+		if keep_alive_func:
+			keep_alive_func()
 		
 
 
