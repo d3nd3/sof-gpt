@@ -47,7 +47,7 @@ if __name__ == "__main__":
 		"spectator_password" 	: "specme",
 		"password"				: "player",
 		"cl_violence"			: "0",
-		"spectator"				: "0",
+		"spectator"				: "1",
 		"skin"					: "widowmaker",
 		"teamname"				: "Ministry of Sin",
 		"fov"					: "95",
@@ -68,7 +68,13 @@ if __name__ == "__main__":
 
 	client.addPlayerToEndpoint(endpoint,userinfo,name)
 
-	# endpoint = client.addEndpoint("5.135.46.179","28916")
+
+	# endpoint = client.addEndpoint("54.39.52.55","28910")
+	# client.addPlayerToEndpoint(endpoint,userinfo,name)
+	# client.addPlayerToEndpoint(endpoint,userinfo,name)
+	# client.addPlayerToEndpoint(endpoint,userinfo,name)
+	# client.addPlayerToEndpoint(endpoint,userinfo,name)
+	# client.addPlayerToEndpoint(endpoint,userinfo,name)
 	# client.addPlayerToEndpoint(endpoint,userinfo,name)
 
 	# endpoint = client.addEndpoint("5.135.46.179","28926")

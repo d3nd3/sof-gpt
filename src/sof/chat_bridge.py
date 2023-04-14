@@ -122,17 +122,6 @@ class GPT_COMMANDS:
 			p.main.gpt["scaled_delay"] = delay
 			util.say(p,f"scaled_delay is now {delay}")
 
-	# Server does not allow you to set predicting 1 after connection
-	# But does allow you to turn it off
-	def predicting(p, data):
-		if not len(data):
-			util.say(p, f"predicting is {p.isPredicting}")
-			return
-		predicting = int(data)
-		if predicting == 0 or predicting == 1:
-			p.setPredicting(predicting)
-			util.say( p ,  f"predicting is now {p.isPredicting}" )
-
 	def forward_speed(p, data):
 		if not len(data):
 			util.say(p, f"forward_speed is {p.uc_now.forwardSpeed}")
@@ -183,10 +172,40 @@ class GPT_COMMANDS:
 		p.userinfo["skin"] = data
 		util.say(p,f"skin is now {data}")
 
+	# Server does not allow you to set predicting 1 after connection
+	# But does allow you to turn it off
+	def predicting(p, data):
+		if not len(data):
+			util.say(p, f"predicting is {p.isPredicting}")
+			return
+		predicting = int(data)
+		if predicting == 0 or predicting == 1:
+			p.setPredicting(predicting)
+			util.say( p ,  f"predicting is now {p.isPredicting}" )
+
+			GPT_COMMANDS.reconnect(p,data)
+
+	def spectator(p,data):
+		if not len(data):
+			util.say(p, f"spectator is {p.userinfo['spectator']}")
+			return
+		p.userinfo["spectator"] = data
+		util.say(p,f"spectator is now {data}")
+
+
 	# COMMANDS
 	# -----------------------------------------------------------------------
 	def stop(p, data):
 		p.main.gpt["chunks"] = []
+
+	def reconnect(p,data):
+		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
+		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
+		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
+		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
+
+		time.sleep(2)
+		p.init = False
 
 	def kill(p, data):
 		p.conn.append_string_to_reliable(f"{CLC_STRINGCMD}kill\x00")
@@ -250,7 +269,7 @@ sof_chat_inputs = {
 sof_chat_commands = {
 	"test": (lambda p, data: GPT_COMMANDS.test(p, data)),
 	"kill": (lambda p, data: GPT_COMMANDS.kill(p, data)),
-	"skin": (lambda p, data: GPT_COMMANDS.skin(p, data)),
+	"reconnect": (lambda p, data: GPT_COMMANDS.reconnect(p, data)),
 	"stop": (lambda p, data: GPT_COMMANDS.stop(p, data)),
 	"quit": (lambda p, data: GPT_COMMANDS.quit(p, data)),
 }
@@ -260,6 +279,8 @@ sof_chat_settings = {
 	"base_delay": (lambda p, data: GPT_COMMANDS.base_delay(p, data)),
 	"scaled_delay": (lambda p, data: GPT_COMMANDS.scaled_delay(p, data)),
 
+	"spectator": (lambda p, data: GPT_COMMANDS.spectator(p, data)),
+	"skin": (lambda p, data: GPT_COMMANDS.skin(p, data)),
 	"predicting": (lambda p, data: GPT_COMMANDS.predicting(p, data)),
 
 	"forward_speed": (lambda p, data: GPT_COMMANDS.forward_speed(p, data)),

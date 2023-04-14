@@ -61,10 +61,15 @@ class SofClient:
 		for ep_key,e in self.endpoints.items():
 			for player in list(e.players):
 				if not player.init:
+					# Reconnect an initted players
+					# Creates Connection object and initialises connection parameters
 					if not player.initialize():
-						print("REMOVING!server not respond!")
+						print("REMOVING! server not respond!")
 						e.players.remove(player)
 						continue
+				if not len(e.players):
+					print("Exiting: no more valid players exist.")
+					sys.exit(1)
 				c = player.conn
 				c.recv()
 				# TODO: THERE IS BUG ON SOME MAPS THAT START PACKET WITH SVC_TMP_ENTITY

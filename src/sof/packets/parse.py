@@ -5,6 +5,10 @@ from sof.packets.defines import *
 import struct
 import time
 
+import re
+
+import util
+
 class Parser:
 	"""
 		parse a null terminated string
@@ -55,72 +59,86 @@ class Parser:
 # if return None will break the packet-scan loop
 
 def svc_bad(conn,player,view):
-    return None
+	return None
 
 def svc_temp_entity(conn,player,view):
-    return None
+	return None
 
 def svc_layout(conn,player,view):
-    return None
+	return None
 
 def svc_unused(conn,player,view):
-    return None
+	return None
 
 def svc_sound_info(conn,player,view):
-    return None
+	return None
 
 def svc_effect(conn,player,view):
-    return None
+	return None
 
 def svc_equip(conn,player,view):
-    return None
+	return None
 
 def svc_nop(conn,player,view):
-    return None
+	return None
 
 def svc_disconnect(conn,player,view):
-    # print("PACKET: disconnect\n")
-    player.init = False
-    return view
+	# print("PACKET: disconnect\n")
+	player.init = False
+	return view
 def svc_reconnect(conn,player,view):
-    return None
+	return None
 
 def svc_sound(conn,player,view):
-    return None
+	return None
 
 def svc_print(conn,player,view):
-    view=view[1:]
-    s,view = Parser.string(view)
-    if s.tobytes().decode(('latin_1')) == "Server restarted\n":
-    	print("Server restart detected via print\n");
-    	player.init = False
-    # print("PACKET: print\n",s.tobytes(),s.tobytes().decode('ISO 8859-1'))
+	view=view[1:]
+	s,view = Parser.string(view)
+	if s.tobytes().decode(('latin_1')) == "Server restarted\n":
+		print("Server restart detected via print\n");
+		player.init = False
+	# print("PACKET: print\n",s.tobytes(),s.tobytes().decode('ISO 8859-1'))
 
-    return view
+	return view
+
 
 def svc_nameprint(conn,player,view):
-    # 2 bytes and a string, 2nd byte = teamsay
-    data1 = struct.unpack_from('<B',view,0)[0]
-    view=view[1:]
-    data2 = struct.unpack_from('<B',view,0)[0]
-    view=view[1:]
+	# 1st byte = client id 2nd byte = teamsay
+	data1 = struct.unpack_from('<B',view,0)[0]
+	view=view[1:]
+	data2 = struct.unpack_from('<B',view,0)[0]
+	view=view[1:]
 
-    s,view = Parser.string(view)
-    s = s.tobytes().decode('latin_1')
+	s,view = Parser.string(view)
+	input_str = s.tobytes().decode('latin_1')
 
-    print(f"client {data1} says : {s}")
+	print(f"client {data1} says : {input_str}")
 
-    pos = s.find(']')
-    if not pos == -1:
-    	s = s[pos+1:]
+	# define the regular expression pattern
+	pattern1 = r"^\[.+\]\s(.*)\n"
 
-    s = s.strip()
+	util.pretty_dump(input_str.encode(('latin_1')))
+	# test input string
+	# input_str = "nameHere : [1 m] some content"
 
-    if s.find("@sofgpt ") == 0:
-    	s = s[8:]
-    	GPT.interact(s,player)
-    
-    return view
+	content = input_str
+	# test for pattern1 first
+	match = re.search(pattern1, input_str)
+	if match:
+		content = match.group(1)
+		print(f"Content: {content}")
+
+	# pos = s.find(':')
+	# if not pos == -1:
+	# 	s = s[pos+1:]
+
+	content = content.strip()
+	if content.find("@sofgpt ") == 0:
+		content = content[8:]
+		GPT.interact(content,player)
+	
+	return view
 
 def svc_stufftext(conn,player,view):
 	s,view = Parser.string(view)
@@ -263,13 +281,13 @@ def svc_spawnbaseline(conn,player,view):
 
 		return parsed_message
 
-    
+	
 
 def svc_centerprint(conn,player,view):
-    return None
+	return None
 
 def svc_captionprint(conn,player,view):
-    return None
+	return None
 
 def svc_download(conn,player,view):
 	#print("PACKET: download\n")
@@ -288,13 +306,13 @@ def svc_download(conn,player,view):
 
 	return view
 def svc_playerinfo(conn,player,view):
-    return None
+	return None
 
 def svc_packetentities(conn,player,view):
-    return None
+	return None
 
 def svc_deltapacketentities(conn,player,view):
-    return None
+	return None
 
 def svc_frame(conn,player,view):
 	# print("svc_Frame")
@@ -516,10 +534,10 @@ def svc_frame(conn,player,view):
 
 	return view
 def svc_culledEvent(conn,player,view):
-    return None
+	return None
 
 def svc_damagetexture(conn,player,view):
-    return None
+	return None
 
 def svc_ghoulreliable(conn,player,view):
 	# print("PACKET: ghoul reliable\n")
@@ -530,46 +548,46 @@ def svc_ghoulreliable(conn,player,view):
 	return view
 
 def svc_ghoulunreliable(conn,player,view):
-    return None
+	return None
 
 def svc_ric(conn,player,view):
-    return None
+	return None
 
 def svc_restart_predn(conn,player,view):
-    return None
+	return None
 
 def svc_rebuild_pred_inv(conn,player,view):
-    return None
+	return None
 
 def svc_countdown(conn,player,view):
-    return None
+	return None
 
 def svc_cinprint(conn,player,view):
-    return None
+	return None
 
 def svc_playernamecols(conn,player,view):
-    return None
+	return None
 
 def svc_sp_print(conn,player,view):
-    return None
+	return None
 
 def svc_removeconfigstring(conn,player,view):
-    return None
+	return None
 
 def svc_sp_print_data_1(conn,player,view):
-    return None
+	return None
 
 def svc_sp_print_data_2(conn,player,view):
-    return None
+	return None
 
 def svc_welcomeprint(conn,player,view):
-    return None
+	return None
 
 def svc_sp_print_obit(conn,player,view):
-    return None
+	return None
 
 def svc_force_con_notify(conn,player,view):
-    return None
+	return None
 
 
 

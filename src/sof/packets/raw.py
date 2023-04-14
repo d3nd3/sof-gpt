@@ -134,8 +134,8 @@ def simpleDeltaUsercmd(player,bitbuffer):
 
 # [But][Lean][Light][Msec][FF]
 # TODO : CANNOT MOVE DIAGONALLY. FIXED : required ten(zero) instead of 0 AND roll 0?
-# TODO : MORE THAN 100 UNACKED DELTA FROM SERVER
-# TODO : RELIABLE SUICIDE BROKEN HIGH PING SERVER
+# TODO : MORE THAN 100 UNACKED DELTA FROM SERVER [ MAybe fixed IDK? ]
+# TODO : RELIABLE SUICIDE BROKEN HIGH PING SERVER [Seems Okay Now, used Print to statements to proove.]
 
 
 # PREDICTION

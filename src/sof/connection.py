@@ -26,8 +26,8 @@ class Connection:
 		self.their_seq_is_r = 0
 		self.their_seq = 0
 
-		self.our_seq = 0
-		self.our_ack = 1
+		self.our_seq = 1
+		self.our_ack = 0
 		self.our_ack_is_r = 0
 		self.our_seq_is_r = 0
 		self.our_last_rel_seq = 0
@@ -61,16 +61,15 @@ class Connection:
 		self.mychal = self.rand(10)
 		# self.mychal = 1680425046
 		buf = "getchallenge {}\x0A\x00".format(self.mychal)
-		
-		self.send_unconnected(buf.encode('latin_1'))
 		while True:
-			# time.sleep(1)
+			self.send_unconnected(buf.encode('latin_1'))
+			time.sleep(1)
 			o = self.recv()
 			# break only once we got the data
 			if type(o) is memoryview:
 				self.chal = bytes.decode(bytes(o[10:]),'latin_1')
 				break
-			if time.time() - startTime > 5:
+			if time.time() - startTime > 20:
 				print("[unconnected] Giving up!")
 				return False
 
@@ -85,15 +84,15 @@ class Connection:
 		buf = "connect 33 {} {} {} 3.14 {}\x0A".format(self.qport,self.chal,self.mychal,"\"" + self.player.make_userinfo() + "\"")
 		# buf = "connect 33 {} {} {} 3.14 {}\x0A".format(self.qport,self.chal,self.mychal,self.player.make_userinfo())
 
-		self.send_unconnected(buf.encode('latin_1'))
+		
 		while True:
-			# time.sleep(1)
-
+			self.send_unconnected(buf.encode('latin_1'))
+			time.sleep(1)
 			o = self.recv()
 			if type(o) is memoryview:
 				break
 
-			if time.time() - startTime > 5:
+			if time.time() - startTime > 20:
 				print("[unconnected] Giving up!")
 				return False
 		return True
@@ -147,6 +146,8 @@ class Connection:
 		# OUR PATH A PACKET HAS RETURNED TO US
 		if our_ack_is_r == self.our_seq_is_r:
 			self.backup_rel_data = bytearray()
+			# print("<----------------")
+			# print(f"ACKED OUR RELIABLE PACKET {our_ack}")
 		
 		# ----save stuff-----
 		# IN_SEQ BECOMES OUT_ACK
@@ -175,8 +176,12 @@ class Connection:
 
 		send_reliable = 0
 
+		# print(f"Current in_ACk state is : {self.our_ack_is_r}")
+
 		# PATH A WAS DROPPED?
 		if self.our_ack > self.our_last_rel_seq and self.our_ack_is_r != self.our_seq_is_r:
+			# print("---------------->")
+			# print(f"Resending {self.our_last_rel_seq - 1}")
 			send_reliable = 1
 
 		# backup empty AND future_send non-empty
@@ -186,6 +191,8 @@ class Connection:
 			self.future_rel_data = bytearray()
 			self.our_seq_is_r ^= 1
 			send_reliable = 1
+			# print("---------------->")
+			# print(f"GENERATING NEW RELIABLE PACKET {self.our_seq & (~(1<<31) & 0xFFFFFFFF)} MATCHING: {self.our_seq_is_r}")
 
 		msg = bytearray(10)
 
