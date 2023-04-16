@@ -116,23 +116,21 @@ def svc_nameprint(conn,player,view):
 	print(f"client {data1} says : {input_str}")
 
 	# define the regular expression pattern
-	pattern1 = r"^\[.+\]\s(.*)\n"
+	pattern = r"^\[.+\]\s(.*)\n"
 
-	util.pretty_dump(input_str.encode(('latin_1')))
+	# util.pretty_dump(input_str.encode(('latin_1')))
+
 	# test input string
 	# input_str = "nameHere : [1 m] some content"
 
 	content = input_str
-	# test for pattern1 first
-	match = re.search(pattern1, input_str)
+	# test for pattern
+	match = re.search(pattern, input_str)
 	if match:
 		content = match.group(1)
-		print(f"Content: {content}")
-
-	# pos = s.find(':')
-	# if not pos == -1:
-	# 	s = s[pos+1:]
-
+		
+	print(f"Content: {content}")
+	
 	content = content.strip()
 	if content.find("@sofgpt ") == 0:
 		content = content[8:]

@@ -311,6 +311,7 @@ def interact(msg,player):
 	elif not len(main.gpt["chunks"]):
 		# not in a request?lets go
 		# pass
+		print("Summoning the genie...")
 		answer = gpt_ask(msg,main.talkToWorld)
 		generate_chunks_gpt(main,answer)
 

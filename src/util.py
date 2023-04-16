@@ -26,3 +26,9 @@ def changeTextColor(player,newColor):
 
 def str_to_byte(str):
 	return str.encode("latin-1")
+
+def byte_to_str(bytes):
+	return bytes.decode("latin-1")
+
+def mem_to_str(memview):
+	return byte_to_str(memview.tobytes())

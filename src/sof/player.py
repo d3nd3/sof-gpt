@@ -208,14 +208,15 @@ class Player:
 			# print(f"lastServerFrame = {self.lastServerFrame}")
 			# negative direction = older
 			#positive = oldest
-			trick_val = (self.lastServerFrame & 15) -2
-			if trick_val > 15:
-				trick_val -= 16
-			if trick_val < 0:
-				trick_val += 16
-			trick_val += 16
-			struct.pack_into('<I',buffer2,move_start+2,trick_val);
-			# struct.pack_into('<I',buffer2,2,self.lastServerFrame);
+			# trick_val = (self.lastServerFrame & 15) -2
+			# if trick_val > 15:
+			# 	trick_val -= 16
+			# if trick_val < 0:
+			# 	trick_val += 16
+			# trick_val += 16
+			# struct.pack_into('<I',buffer2,move_start+2,trick_val);
+			# Server takes average of the buffer to calculate ping. So if include oldest in average it makes ping higher.
+			struct.pack_into('<I',buffer2,move_start+2,self.lastServerFrame);
 
 		# length move_command and checksum byte ignored 6-2 = 4
 

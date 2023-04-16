@@ -7,7 +7,8 @@ import errno
 from sof.packets.parse import Parser,packet_parsers
 from sof.packets.types import packetIDtoName
 
-from util import pretty_dump
+import util
+
 
 class Endpoint:
 	def __init__(self,ip,port):
@@ -44,7 +45,8 @@ class Connection:
 		self.qport=self.rand(5) & 0x07FF
 		# self.qport = 33333
 		self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-		self.s.settimeout(0)
+		# self.s.settimeout(0)
+		self.s.setblocking(False)
 		self.connected = 0
 		self.expectmapname = False
 		self.i_downloading = 0
@@ -57,44 +59,71 @@ class Connection:
 			rand += str(i)
 		return int(''.join(map(str, rand))) 
 	def get_challenge(self,startTime):
-		print("[unconnected] Sending getchallenge to server")
 		self.mychal = self.rand(10)
 		# self.mychal = 1680425046
 		buf = "getchallenge {}\x0A\x00".format(self.mychal)
 		while True:
+			print("[unconnected] Sending getchallenge to server")
+			recent_send = time.time()
 			self.send_unconnected(buf.encode('latin_1'))
-			time.sleep(1)
-			o = self.recv()
-			# break only once we got the data
-			if type(o) is memoryview:
-				self.chal = bytes.decode(bytes(o[10:]),'latin_1')
-				break
-			if time.time() - startTime > 20:
-				print("[unconnected] Giving up!")
-				return False
-
-		print(f"[unconnected] received challenge {self.chal}")
-		return True
-		
+			while True:	
+				o = self.recv()
+				# break only once we got the data
+				if type(o) is memoryview:
+					self.chal = bytes.decode(bytes(o[10:]),'latin_1')
+					print(f"[unconnected] received challenge {self.chal}")
+					return True
+				now = time.time()
+				if now - recent_send > 3:
+					break
+				if now - startTime > 20:
+					print("[unconnected] Giving up!")
+					return False
+				time.sleep(0.1)
 
 	def connect(self,startTime):
-		print("[unconnected] Sending connect to server")
-		#sprintf(tmp_buf,"connect 33 %hu %lu %lu 3.14 "userinfo"\x0A\x00",qport,i_chal,mychal);
-
 		buf = "connect 33 {} {} {} 3.14 {}\x0A".format(self.qport,self.chal,self.mychal,"\"" + self.player.make_userinfo() + "\"")
 		# buf = "connect 33 {} {} {} 3.14 {}\x0A".format(self.qport,self.chal,self.mychal,self.player.make_userinfo())
-
-		
+		response = False
 		while True:
+			print("[unconnected] Sending connect to server")
+			recent_send = time.time()
 			self.send_unconnected(buf.encode('latin_1'))
-			time.sleep(1)
-			o = self.recv()
-			if type(o) is memoryview:
+			while True:
+				o = self.recv()
+				# break only once we got the data
+				if type(o) is memoryview:
+					response = util.mem_to_str(o)
+					break
+				now = time.time()
+				if now - recent_send > 3:
+					break
+				if now - startTime > 20:
+					print("[unconnected] Giving up!")
+					return False
+
+				time.sleep(0.1)
+			# double break
+			if response:
 				break
 
-			if time.time() - startTime > 20:
-				print("[unconnected] Giving up!")
+		print(f"[unconnected] Received client_connect... {util.mem_to_str(o)}")
+		
+		# No spectator password eg.
+		if response.startswith("rejected_spectator_password"):
+
+			# we dont know the pass, try spec 0
+			self.player.userinfo["spectator"] = "0"
+
+			self.__init__(self.player,self.player.endpoint.ip,self.player.endpoint.port)
+			self.player.timestamp_start = time.time()
+
+			if not self.get_challenge(self.player.timestamp_start):
 				return False
+			# call ourself?
+			if not self.connect(self.player.timestamp_start):
+				return False
+			return True
 		return True
 	def new(self):
 		print("[connected] Sending new to server")
@@ -116,7 +145,7 @@ class Connection:
 	# REFER TO DIAGRAM GOOGLE NOTES
 	def netchan_process(self,view):
 		# print("-------------------RECEIVING----------------------")
-		# pretty_dump(view)
+		# util.pretty_dump(view)
 
 
 		#so must be connected packet...
@@ -211,7 +240,7 @@ class Connection:
 		msg += unreliable_data
 
 		# print("--------------SENDING CONNECTED-----------------")
-		# pretty_dump(msg)
+		# util.pretty_dump(msg)
 
 		self.s.sendto(msg,self.server)
 
@@ -219,9 +248,7 @@ class Connection:
 	def send_unconnected(self,data):
 		send_buffer = b'\xFF\xFF\xFF\xFF' + data
 		self.s.sendto(send_buffer,self.server)
-
-		print("---------------SENDING UNCONNECTED-----------------")
-		pretty_dump(send_buffer)
+		# util.pretty_dump(send_buffer)
 
 	def recv(self):
 		while True:
@@ -230,6 +257,7 @@ class Connection:
 			view = memoryview(msg)
 			try:
 				nbytes = self.s.recv_into(view)
+			# we dont actually use non blocking sockets, we use timeout. oops?
 			except socket.error as e:
 				err = e.args[0]
 				if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
