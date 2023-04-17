@@ -21,7 +21,6 @@ def keyup(p,key):
 	elif key == pygame.K_RCTRL:
 		p.uc_now.fireEvent = 0.0
 	elif key == pygame.K_SPACE:
-		p.uc_now.dead = 6
 		print("REVIVE!")
 
 def keydown(p,key):

@@ -129,7 +129,7 @@ def svc_nameprint(conn,player,view):
 	if match:
 		content = match.group(1)
 		
-	print(f"Content: {content}")
+	# print(f"Content: {content}")
 	
 	content = content.strip()
 	if content.find("@sofgpt ") == 0:
@@ -143,17 +143,17 @@ def svc_stufftext(conn,player,view):
 	# print(f"{s.tobytes()}")
 
 	# returns cmd based strings
-	l=Parser.stufftext(s,conn,player)
+	cmd_stufftexts=Parser.stufftext(s,conn,player)
 
-	for a in l:
+	for a in cmd_stufftexts:
 		
-		if a.find("configstrings",0) == 0:
+		if a.find("configstrings ",0) == 0:
 			conn.append_string_to_reliable("\x04"+a+"\x00")
 		elif a.find("begin",0) == 0:
 			conn.connected = 2
 			# send it back to server
 			conn.append_string_to_reliable(f"\x04begin {player.precache}\x00")
-		elif a.find(".check",0) == 0:
+		elif a.find(".check ",0) == 0:
 			
 			a = a.replace("#cl_minfps","5")
 			a = a.replace("#cl_maxfps","30")
@@ -175,6 +175,9 @@ def svc_stufftext(conn,player,view):
 			a = a.replace("#ghl_shadow_dist","25")
 			a = a.replace("#cl_testlights","0")
 			a = a.replace("#cl_testblend","0")
+			# send it back to server
+			conn.append_string_to_reliable(f"\x04{a}\x00")
+		elif a.find("baselines ",0) == 0:
 			# send it back to server
 			conn.append_string_to_reliable(f"\x04{a}\x00")
 		else:
@@ -218,7 +221,19 @@ def svc_spawnbaseline(conn,player,view):
 		conn.i_downloading = 1
 		# print("SERVED BY BASELINE\n")
 	else:
-		print("failed getting precache\n")
+		# assume more baselines...
+		fail = True
+		find_more_base = data.find(b"\x0dcmd baselines ",0)
+		if find_more_base >= 0:
+			pattern = r"\x0d(cmd baselines .*)\x0a"
+			match = re.search(pattern, data[find_more_base:].decode("latin-1"))
+			if match:
+				conn.append_string_to_reliable(f"\x04{match.group(1)}\x00")
+				fail = False
+		
+		if fail:
+			print("Ooops cannot enter server no precache dead end\n")
+			player.endpoint.removePlayer(p)
 	
 	return None
 

@@ -3,6 +3,7 @@ from sof.client import SofClient
 import sys
 import time
 
+import util
 from sof.packets.raw import COM_BlockSequenceCRCByte
 
 import pygame
@@ -30,6 +31,8 @@ def test_checksum():
 if __name__ == "__main__":
 	# test_checksum()
 
+	# util.print_bits(b"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+	# sys.exit(1)
 	ip = sys.argv[1]
 	port = sys.argv[2]
 	name = sys.argv[3]
@@ -67,10 +70,7 @@ if __name__ == "__main__":
 	# green visible font
 
 	client.addPlayerToEndpoint(endpoint,userinfo,name)
-
-
-	# endpoint = client.addEndpoint("54.39.52.55","28910")
-	# client.addPlayerToEndpoint(endpoint,userinfo,name)
+	#client.addPlayerToEndpoint(endpoint,userinfo,name)
 	# client.addPlayerToEndpoint(endpoint,userinfo,name)
 	# client.addPlayerToEndpoint(endpoint,userinfo,name)
 	# client.addPlayerToEndpoint(endpoint,userinfo,name)

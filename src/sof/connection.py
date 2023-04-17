@@ -16,6 +16,9 @@ class Endpoint:
 		self.port = port
 		self.players = []
 
+	def removePlayer(self,player):
+		self.players.remove(player)
+
 # this class represents the network code required to talk to server
 # unique for each player , unique socket handle.
 class Connection:

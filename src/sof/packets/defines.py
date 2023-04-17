@@ -73,7 +73,7 @@ BUTTON_WEAP3=8
 BUTTON_WEAP4=16
 BUTTON_RUN=32
 BUTTON_ACTION=64
-#define BUTTON_ANY      128     // any key whatsoever
+BUTTON_ALL=127
 
 P_WHITE = '\x01'
 P_RED = '\x02'

@@ -11,6 +11,8 @@ import sof.keys
 
 import pygame
 
+import sys
+
 # this class represents the entire tool.
 # ideally handles multiple connections
 # and ideally there can be multiple players to a connection
@@ -22,6 +24,7 @@ class SofClient:
 		self.endpoints = {}
 		# there can only be 1 instance of gpt
 		self.gpt = {
+			"active" : False,
 			"chunks" : [],
 			"chunk_len_prev" : 0,
 			"say_timestamp" : time.time(),
@@ -30,11 +33,14 @@ class SofClient:
 
 			"toggle_color" : False,
 			"toggle_color_1" : P_WHITE,
-			"toggle_color_2" : P_GREEN
+			"toggle_color_2" : P_GREEN,
 		}
 
 		self.connectedCount = 0
-		self.target_fps = 1 / 50
+		self.msec_sleep = 7
+		self.float_sleep = 7 / 1000
+		self.target_fps = round(1000/7)
+
 		self.framecount = 0
 		self.main_begin = self.before_cpu = time.time()
 		
@@ -59,6 +65,7 @@ class SofClient:
 		# Player doesnt renew, but Connection does.
 		# Store wasConnected in player
 		for ep_key,e in self.endpoints.items():
+			# using list() so that we can remove from it easier.
 			for player in list(e.players):
 				if not player.init:
 					# Reconnect an initted players
@@ -81,7 +88,8 @@ class SofClient:
 
 				pygame.display.update()
 				
-				# sends heartbeat 50 times a second
+				# sends heartbeat fps times a second
+				# connected 2 == fully connected , its resembling states from q2.
 				if c.connected == 2:
 					if player.wasConnected != 2:
 						self.connectedCount +=1
@@ -89,8 +97,6 @@ class SofClient:
 						# time.sleep(0.5)
 						player.onEnterServer()
 
-					# send gpt output
-					output_gpt(self,player,c)
 				elif c.connected == 0:
 					if player.wasConnected > 0:
 						self.connectedCount -=1
@@ -103,27 +109,37 @@ class SofClient:
 
 				player.wasConnected = player.conn.connected
 
-
+			# TODO: make gpt output endpoint specific, meaning output to same endpoint the request was generated in.
+			for player in e.players:
+				if player.conn.connected == 2:
+					# its timer restricted. so it doesnt spam
+					output_gpt(self,player,player.conn)
+				break
 	def beginLoop(self):
-		print("beginLoop")
-		# 0.02 of a second = 20ms = 50fps
-		
-		
+		print("Starting sof-gpt...")
 		while True:
 			self.framecount += 1
 
 			self.talkToWorld()
-					
+
 			now = time.time()
 			fps = self.framecount / (now-self.main_begin)
-			if (self.framecount % (50 * 10)) == 0:
-				print(f"STATS: { len(self.endpoints)} endpoints. With { len( [ self.endpoints[e] for e in self.endpoints for p in self.endpoints[e].players if p.conn.connected ])} connected players" )
+
+			# every 10 seconds
+			if (self.framecount % (self.target_fps * 10)) == 0:
+				num_eps = len(self.endpoints)
+				num_players = len([ self.endpoints[e] for e in self.endpoints for p in self.endpoints[e].players ])
+
+				print(f"STATS: { num_eps } endpoints. With { len( [ self.endpoints[e] for e in self.endpoints for p in self.endpoints[e].players if p.conn.connected == 2 ])} connected players" )
+
+				if num_players == 0:
+					sys.exit(0)
 				# print(f"fps is {fps}")
 
 			# ----sleep----
 			exec_time = time.time() - self.before_cpu
 			# too fast? sleep some
-			if exec_time < self.target_fps:
-				time.sleep(self.target_fps-exec_time)
+			if exec_time < self.float_sleep:
+				time.sleep(self.float_sleep-exec_time)
 
 			self.before_cpu = time.time()

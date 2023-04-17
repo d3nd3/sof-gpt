@@ -13,6 +13,42 @@ from sof.packets.defines import *
 import util
 
 class UserCmd:
+	def __init__(self,msec):
+		self.forwardspeed = 0
+		self.upspeed = 0
+		self.sidespeed = 0
+
+		self.lean = 0
+
+		self.buttonsPressed = 0
+		self.fireEvent = 0.0
+		self.altFireEvent = 0.0
+
+		self.msec = msec
+		self.lightLevel = 0
+		# angles
+		self.pitch = 0
+		self.roll = 0
+		self.yaw = 0
+		
+
+
+"""
+typedef struct usercmd_s
+{
+	byte	msec;
+	byte	buttons;
+	byte	lightlevel;		// light level the player is standing on
+	char	lean;			// -1 or 1
+	short	angles[3];
+	short	forwardmove;
+	short	sidemove;
+	short	upmove;
+	float	fireEvent;
+	float	altfireEvent;
+} usercmd_t;
+"""
+class UserInput:
 	def __init__(self):
 		# roll
 		self.rollRight = False
@@ -36,31 +72,12 @@ class UserCmd:
 		self.moveLeft = False
 		self.moveRight = False
 
-		# other
+		self.isRunning = True
+		self.fire = False
+		self.altfire = False
 
-		self.leanLeft = False
 		self.leanRight = False
-
-		self.buttonsPressed = BUTTON_RUN
-		self.shoot = False
-		self.fireEvent = False
-		self.altFireEvent = False
-
-		self.msec = 20
-		self.lightLevel = 5
-		
-		self.yaw = 0
-		self.pitch = 0
-		self.roll = 0
-
-		self.yaw_before = 0
-		self.pitch_before = 0
-		self.roll_before = 0
-
-		self.fire_before = 0
-		self.buttons_before = 0
-
-		self.dead = False
+		self.leanLeft = False
 
 
 # This now represents everything
@@ -97,14 +114,15 @@ class Player:
 
 		self.forward_speed = 100
 
-
+		
+		self.uc_null = UserCmd(0)
 		# Internal to firing mechanics
 		self.internal_allowed_to_fire = 2
 		self.internal_allowed_to_fire_basic = True
 		self.internal_allowed_to_fire_timer = time.time()
 		self.internal_allowed_to_fire2 = True
 
-		self.uc_now = UserCmd()
+		self.reinit()
 
 		# userinfo dict creation
 		self.textColor = P_GREEN
@@ -137,6 +155,15 @@ class Player:
 		
 		return True
 
+	# soft cleaning of inputs values
+	def reinit(self):
+		self.viewangles = [0,0,0]
+		self.input = UserInput()
+		self.uc_oldest = UserCmd(self.main.msec_sleep)
+		self.uc_now = UserCmd(self.main.msec_sleep)
+		self.uc_old = UserCmd(self.main.msec_sleep)
+		self.uc_oldest = UserCmd(self.main.msec_sleep)
+
 	def setPredicting(self,val):
 		if val:
 			self.isPredicting = True
@@ -161,7 +188,7 @@ class Player:
 		# conn.send(True,(f"\x04say Hi interact with me using @sofgpt\x00").encode('ISO 8859-1'))
 		self.conn.append_string_to_reliable(f"{types.CLC_STRINGCMD}say Hi!\x00")
 
-		self.uc_now = UserCmd()
+		self.reinit()
 
 	# you can append a bytes object to a bytesarray with += , str.encode() returns bytes.
 
@@ -180,6 +207,8 @@ class Player:
 				# except ack confirmations.
 				self.conn.netchan_transmit(bytearray());
 			return
+
+		self.applyMove()
 
 		buffer2 = bytearray()
 
@@ -232,3 +261,129 @@ class Player:
 		
 		self.conn.netchan_transmit(buffer2)
 
+
+	# The cmd is freshly created every frame starting off at 0.
+	def applyMove(self):
+
+		# pitch
+		cmd = self.uc_now
+		# start from 0
+		cmd.__init__(self.main.msec_sleep)
+
+		if self.input.lookUp:
+			self.viewangles[0] -= self.pitch_speed
+			if self.viewangles[0] < -2048 :
+				self.viewangles[0] += 4096
+		elif self.input.lookDown:
+			self.viewangles[0] += self.pitch_speed
+			if self.viewangles[0] > 2047:
+				self.viewangles[0] -= 4096
+
+		if self.custom_pitch != 9999:
+			self.viewangles[0] = self.custom_pitch
+
+		# this this causes bug for player assume always have to send?
+		# if state.pitch_before != state.pitch:
+		# changed
+		cmd.pitch = self.viewangles[0] - (self.delta_pitch // 16)
+		if cmd.pitch < -2048:
+			cmd.pitch += 4096
+		elif cmd.pitch > 2047:
+			cmd.pitch -= 4096
+
+		# yaw
+		if self.input.lookRight:
+			self.viewangles[1] -= self.yaw_speed
+			if self.viewangles[1] < -2048 :
+				self.viewangles[1] += 4096
+		elif self.input.lookLeft:
+			self.viewangles[1] += self.yaw_speed
+			if self.viewangles[1] > 2047:
+				self.viewangles[1] -= 4096
+
+		if self.custom_yaw != 9999:
+			self.viewangles[1] = self.custom_yaw
+
+		cmd.yaw = self.viewangles[1] - (self.delta_yaw // 16)
+		if cmd.yaw < -2048:
+			cmd.yaw += 4096
+		elif cmd.yaw > 2047:
+			cmd.yaw -= 4096
+
+		# roll
+		if self.input.rollRight:
+			self.viewangles[2] -= self.roll_speed
+			if self.viewangles[2] < -2048 :
+				self.viewangles[2] += 4096
+		elif self.input.rollLeft:
+			self.viewangles[2] += self.roll_speed
+			if self.viewangles[2] > 2047:
+				self.viewangles[2] -= 4096
+
+		if self.custom_roll != 9999:
+			self.viewangles[2] = self.custom_roll
+
+		cmd.roll = self.viewangles[2] - (self.delta_roll // 16)
+		if cmd.roll < -2048:
+			cmd.roll += 4096
+		elif cmd.roll > 2047:
+			cmd.roll -= 4096
+
+		# forward/backward
+		if self.input.moveBack:
+			cmd.forwardspeed = -200
+		elif self.input.moveForward:
+			cmd.forwardspeed = 200
+
+		# left/right
+		if self.input.moveLeft:
+			cmd.sidespeed = -160
+		elif self.input.moveRight:
+			cmd.sidespeed = 160
+
+		# up/down
+		if self.input.moveUp:
+			cmd.upspeed = 200
+		elif self.input.moveDown:
+			cmd.upspeed = -200
+
+		# buttonn lean lightlevel
+		# respawn / non-predicting
+		# if ( self.input.fire or self.isPredicting ) and self.internal_allowed_to_fire_basic:
+		# 	cmd.buttonsPressed |= BUTTON_ATTACK
+		# 	self.internal_allowed_to_fire_basic = False
+		# else:
+		# 	self.internal_allowed_to_fire_basic = True
+
+		if self.input.isRunning:
+			cmd.buttonsPressed |= BUTTON_RUN
+			cmd.buttonsPressed &= ~BUTTON_ALL
+
+		if self.input.leanRight:
+			cmd.lean = 1
+		elif self.input.leanLeft:
+			cmd.lean = 2
+
+		cmd.lightLevel = 0x5
+
+		"""
+		Seems they control the rate of fire by not allowing you to fire 2 consecutive packets
+		Lets simulate fast toggle then
+		"""
+		if self.isPredicting and self.input.fire and self.internal_allowed_to_fire >= 2:
+		# if player.isPredicting and state.fireEvent and time_now - player.internal_allowed_to_fire_timer > 0.1:
+			# want to fire
+			cmd.fireEvent = 1.0
+			# player.internal_allowed_to_fire_timer = time.time()
+			self.internal_allowed_to_fire = 0
+		# do not want to fire or not allowed to fire
+		else:
+			# 2 frames inactive
+			self.internal_allowed_to_fire += 1
+
+		if self.isPredicting and self.input.altfire and self.internal_allowed_to_fire2:
+			# state.fireEvent forced to default 0.0 every frame
+			cmd.altFireEvent = 1.0
+			self.internal_allowed_to_fire2 = False
+		else:
+			self.internal_allowed_to_fire2 = True

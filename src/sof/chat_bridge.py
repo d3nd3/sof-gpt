@@ -16,83 +16,87 @@ class GPT_COMMANDS:
 	# -----------------------------------------------------------------------
 	# ROLL
 	def plus_rollleft(p, data):
-		p.uc_now.rollLeft = True
+		p.input.rollLeft = True
 	def minus_rollleft(p, data):
-		p.uc_now.rollLeft = False
+		p.input.rollLeft = False
 
 	def plus_rollright(p, data):
-		p.uc_now.rollRight = True
+		p.input.rollRight = True
 	def minus_rollright(p, data):
-		p.uc_now.rollRight = False
+		p.input.rollRight = False
 
 	# PITCH
 	def plus_lookup(p, data):
-		p.uc_now.lookUp = True
+		p.input.lookUp = True
 	def minus_lookup(p, data):
-		p.uc_now.lookUp = False
+		p.input.lookUp = False
 
 	def plus_lookdown(p, data):
-		p.uc_now.lookDown = True
+		p.input.lookDown = True
 	def minus_lookdown(p, data):
-		p.uc_now.lookDown = False
+		p.input.lookDown = False
 
 	# YAW
 	def plus_left(p, data):
-		p.uc_now.lookLeft = True
+		p.input.lookLeft = True
 	def minus_left(p, data):
-		p.uc_now.lookLeft = False
+		p.input.lookLeft = False
 
 	def plus_right(p, data):
-		p.uc_now.lookRight = True
+		p.input.lookRight = True
 	def minus_right(p, data):
-		p.uc_now.lookRight = False
+		p.input.lookRight = False
 
 
 	# FORWARD
 	def plus_forward(p, data):
-		p.uc_now.moveForward = True
+		p.input.moveForward = True
 	def minus_forward(p, data):
-		p.uc_now.moveForward = False
+		p.input.moveForward = False
 	def plus_back(p, data):
-		p.uc_now.moveBack = True
+		p.input.moveBack = True
 	def minus_back(p, data):
-		p.uc_now.moveBack = False
+		p.input.moveBack = False
 
 	# SIDEWAYS
 	def plus_moveright(p, data):
-		p.uc_now.moveRight = True
+		p.input.moveRight = True
 	def minus_moveright(p, data):
-		p.uc_now.moveRight = False
+		p.input.moveRight = False
 	def plus_moveleft(p, data):
-		p.uc_now.moveLeft = True
+		p.input.moveLeft = True
 	def minus_moveleft(p, data):
-		p.uc_now.moveLeft = False
+		p.input.moveLeft = False
 
 	# JUMP/CROUCH
 	def plus_moveup(p, data):
-		p.uc_now.moveUp = True
+		p.input.moveUp = True
 	def minus_moveup(p, data):
-		p.uc_now.moveUp = False
+		p.input.moveUp = False
 	def plus_movedown(p, data):
-		p.uc_now.moveDown = True
+		p.input.moveDown = True
 	def minus_movedown(p, data):
-		p.uc_now.moveDown = False
+		p.input.moveDown = False
 
+	def plus_leanleft(p, data):
+		p.input.leanLeft = True
+	def minus_leanleft(p, data):
+		p.input.leanLeft = False
+	def plus_leanright(p, data):
+		p.input.leanRight = True
+	def minus_leanright(p, data):
+		p.input.leanRight = False
 
 	# OTHER
 	def plus_attack(p, data):
-		# p.uc_now.buttonsPressed |= BUTTON_ATTACK
-		p.uc_now.fireEvent = 1.0
+		p.input.fire = True
 	def minus_attack(p, data):
-		# p.uc_now.buttonsPressed &= ~BUTTON_ATTACK
-		p.uc_now.fireEvent = 0.0
+		p.input.fire = False
 
 	def plus_altattack(p, data):
-		# p.uc_now.buttonsPressed |= BUTTON_ALTATTACK
-		p.uc_now.altFireEvent = 1.0
+		p.input.altfire = True
 	def minus_altattack(p, data):
-		# p.uc_now.buttonsPressed &= ~BUTTON_ALTATTACK
-		p.uc_now.altFireEvent = 0.0
+		p.input.altfire = False
 
 	def plus_use(p, data):
 		p.uc_now.buttonsPressed |= BUTTON_ACTION
@@ -212,7 +216,6 @@ class GPT_COMMANDS:
 
 	def test(p, data):
 		util.say(p,"test")
-		p.uc_now.fireEvent = True
 
 	def quit(p,data):
 		util.say(p,f"Goodbye!")
@@ -220,7 +223,12 @@ class GPT_COMMANDS:
 		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
 		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
 		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
-		sys.exit(0)
+
+		# Remove self from endpoint
+		p.endpoint.removePlayer(p)
+
+		# Player is forgotten about now?
+
 
 sof_chat_inputs = {
 	# angles
@@ -254,6 +262,11 @@ sof_chat_inputs = {
 	"-moveup": (lambda p, data: GPT_COMMANDS.minus_moveup(p, data)),
 	"+movedown": (lambda p, data: GPT_COMMANDS.plus_movedown(p, data)),
 	"-movedown": (lambda p, data: GPT_COMMANDS.minus_movedown(p, data)),
+
+	"+leanleft": (lambda p, data: GPT_COMMANDS.plus_leanleft(p, data)),
+	"-leanleft": (lambda p, data: GPT_COMMANDS.minus_leanleft(p, data)),
+	"+leanright": (lambda p, data: GPT_COMMANDS.plus_leanright(p, data)),
+	"-leanright": (lambda p, data: GPT_COMMANDS.minus_leanright(p, data)),
 
 	# interactions
 	"+attack": (lambda p, data: GPT_COMMANDS.plus_attack(p, data)),
@@ -296,9 +309,9 @@ sof_chat_settings = {
 
 def interact(msg,player):
 	main = player.main
+	# util.pretty_dump(msg.encode('latin_1'))
 	if msg.startswith("["):
 		end = msg.find("]")
-		# util.pretty_dump(msg.encode('latin_1'))
 		if end > 0:
 			cmd = msg[1:end]
 			print(f"{cmd} command")
@@ -308,12 +321,16 @@ def interact(msg,player):
 				sof_chat_commands[cmd](player,msg[end+1:])
 			elif cmd in sof_chat_settings:
 				sof_chat_settings[cmd](player,msg[end+1:])
-	elif not len(main.gpt["chunks"]):
+	elif not main.gpt["active"] and not len(main.gpt["chunks"]):
+		main.gpt["active"] = True
 		# not in a request?lets go
 		# pass
+		# RECURSION???
 		print("Summoning the genie...")
+		# Calling talkToWorld here is allowing another instance into here.
 		answer = gpt_ask(msg,main.talkToWorld)
 		generate_chunks_gpt(main,answer)
+		main.gpt["active"] = False
 
 
 # split the gpt response into chunks that fit nicely into sof say
@@ -370,9 +387,10 @@ def output_gpt(main,player,conn):
 
 			main.gpt["toggle_color"] = not main.gpt["toggle_color"]
 			if main.gpt["toggle_color"]:
-				color = main.gpt["toggle_color_1"]
-			else:
 				color = main.gpt["toggle_color_2"]
+			else:
+				color = main.gpt["toggle_color_1"]
+				
 
 			util.changeTextColor(player,color)
 			conn.append_string_to_reliable(f"\x04say {chunks[0]}\x00")
