@@ -107,8 +107,14 @@ def svc_nameprint(conn,player,view):
 	# 1st byte = client id 2nd byte = teamsay
 	data1 = struct.unpack_from('<B',view,0)[0]
 	view=view[1:]
-	data2 = struct.unpack_from('<B',view,0)[0]
-	view=view[1:]
+	try:
+		data2 = struct.unpack_from('<B',view,0)[0]
+		view=view[1:]
+	except:
+		# this only happens when > 32 clients in server
+		print("----------WEIRD DATA RECEIVED-------------")
+		return
+	
 
 	s,view = Parser.string(view)
 	input_str = s.tobytes().decode('latin_1')

@@ -73,6 +73,8 @@ class UserInput:
 		self.moveRight = False
 
 		self.isRunning = True
+		self.isPredicting = False
+
 		self.fire = False
 		self.altfire = False
 
@@ -97,8 +99,6 @@ class Player:
 		self.init = False
 		self.endpoint = endpoint
 
-		self.isPredicting = True
-
 		# 9999 special value to say, don't use custom pitch
 		self.custom_pitch = 9999
 		self.custom_yaw = 9999
@@ -114,15 +114,12 @@ class Player:
 
 		self.forward_speed = 100
 
-		
 		self.uc_null = UserCmd(0)
 		# Internal to firing mechanics
 		self.internal_allowed_to_fire = 2
 		self.internal_allowed_to_fire_basic = True
 		self.internal_allowed_to_fire_timer = time.time()
 		self.internal_allowed_to_fire2 = True
-
-		self.reinit()
 
 		# userinfo dict creation
 		self.textColor = P_GREEN
@@ -131,12 +128,14 @@ class Player:
 		self.userinfo = userinfo
 		self.past_userinfo = self.userinfo.copy()
 
-		# depends on userinfo
-		self.setPredicting(self.isPredicting)
+		
 
 
 	def initialize(self):
 		self.init = True
+
+		self.reinit_usercmd()
+
 		self.conn = Connection(self,self.endpoint.ip,self.endpoint.port)
 		self.timestamp_start = time.time()
 
@@ -152,11 +151,11 @@ class Player:
 		self.conn.in_seq = 0
 		self.conn.reliable_s = 1
 		self.conn.new()
-		
+
 		return True
 
 	# soft cleaning of inputs values
-	def reinit(self):
+	def reinit_usercmd(self):
 		self.viewangles = [0,0,0]
 		self.input = UserInput()
 		self.uc_oldest = UserCmd(self.main.msec_sleep)
@@ -164,12 +163,15 @@ class Player:
 		self.uc_old = UserCmd(self.main.msec_sleep)
 		self.uc_oldest = UserCmd(self.main.msec_sleep)
 
+		# depends on userinfo and sets userinfo
+		self.setPredicting(self.input.isPredicting)
+
 	def setPredicting(self,val):
 		if val:
-			self.isPredicting = True
+			self.input.isPredicting = True
 			self.userinfo["predicting"] = "1"
 		else:
-			self.isPredicting = False
+			self.input.isPredicting = False
 			self.userinfo["predicting"] = "0"
 
 	def make_userinfo(self):
@@ -187,8 +189,6 @@ class Player:
 		self.timestamp_connected = time.time()
 		# conn.send(True,(f"\x04say Hi interact with me using @sofgpt\x00").encode('ISO 8859-1'))
 		self.conn.append_string_to_reliable(f"{types.CLC_STRINGCMD}say Hi!\x00")
-
-		self.reinit()
 
 	# you can append a bytes object to a bytesarray with += , str.encode() returns bytes.
 
@@ -357,7 +357,6 @@ class Player:
 
 		if self.input.isRunning:
 			cmd.buttonsPressed |= BUTTON_RUN
-			cmd.buttonsPressed &= ~BUTTON_ALL
 
 		if self.input.leanRight:
 			cmd.lean = 1
@@ -370,7 +369,7 @@ class Player:
 		Seems they control the rate of fire by not allowing you to fire 2 consecutive packets
 		Lets simulate fast toggle then
 		"""
-		if self.isPredicting and self.input.fire and self.internal_allowed_to_fire >= 2:
+		if self.input.isPredicting and self.input.fire and self.internal_allowed_to_fire >= 2:
 		# if player.isPredicting and state.fireEvent and time_now - player.internal_allowed_to_fire_timer > 0.1:
 			# want to fire
 			cmd.fireEvent = 1.0
@@ -381,7 +380,7 @@ class Player:
 			# 2 frames inactive
 			self.internal_allowed_to_fire += 1
 
-		if self.isPredicting and self.input.altfire and self.internal_allowed_to_fire2:
+		if self.input.isPredicting and self.input.altfire and self.internal_allowed_to_fire2:
 			# state.fireEvent forced to default 0.0 every frame
 			cmd.altFireEvent = 1.0
 			self.internal_allowed_to_fire2 = False

@@ -50,7 +50,7 @@ if __name__ == "__main__":
 		"spectator_password" 	: "specme",
 		"password"				: "player",
 		"cl_violence"			: "0",
-		"spectator"				: "1",
+		"spectator"				: "0",
 		"skin"					: "widowmaker",
 		"teamname"				: "Ministry of Sin",
 		"fov"					: "95",
@@ -69,20 +69,12 @@ if __name__ == "__main__":
 	endpoint = client.addEndpoint(ip,port)
 	# green visible font
 
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
-	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	# 16+ player unconnectable client struggles.
+	# 13 clients = message over flow. ( 2 + 11)
+	for i in range(0,3):
+		print(i,"clients")
+		client.addPlayerToEndpoint(endpoint,userinfo,name)
+	
 	# endpoint = client.addEndpoint("5.135.46.179","28926")
 	# client.addPlayerToEndpoint(endpoint,userinfo,name)
 

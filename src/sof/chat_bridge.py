@@ -196,6 +196,15 @@ class GPT_COMMANDS:
 		p.userinfo["spectator"] = data
 		util.say(p,f"spectator is now {data}")
 
+	def cl_run(p, data):
+		if not len(data):
+			util.say(p, f"cl_run is {p.isPredicting}")
+			return
+		cl_run = int(data)
+		if cl_rum == 0 or cl_run == 1:
+			p.input.isRunning = cl_run
+			util.say( p ,  f"cl_run is now {p.isRunning}" )
+
 
 	# COMMANDS
 	# -----------------------------------------------------------------------
@@ -207,8 +216,6 @@ class GPT_COMMANDS:
 		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
 		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
 		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
-
-		time.sleep(2)
 		p.init = False
 
 	def kill(p, data):
