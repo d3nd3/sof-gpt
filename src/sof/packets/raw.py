@@ -226,14 +226,14 @@ def deltaUsercmd(player,bitbuffer,deltafrom,deltato):
 
 	# LEAN - reduces msec by 1 bit when active
 	if deltato.lean != deltafrom.lean:
-			dataToBits(bitbuffer,one,1,debugPrint=True,debugPrintName="LeanActive",flip=False)
+			dataToBits(bitbuffer,one,1,debugPrint=False,debugPrintName="LeanActive",flip=False)
 			if deltato.lean == 2:
-				dataToBits(bitbuffer,bytes((0,)),1,debugPrint=True,debugPrintName="LeanLeft")
+				dataToBits(bitbuffer,bytes((0,)),1,debugPrint=False,debugPrintName="LeanLeft")
 			else:
-				dataToBits(bitbuffer,bytes((1,)),1,debugPrint=True,debugPrintName="LeanRight")
+				dataToBits(bitbuffer,bytes((1,)),1,debugPrint=False,debugPrintName="LeanRight")
 	else:
 		# unchanged from previous
-		dataToBits(bitbuffer,zero,1,debugPrint=True,debugPrintName="LeanUnchanged")
+		dataToBits(bitbuffer,zero,1,debugPrint=False,debugPrintName="LeanUnchanged")
 
 
 	# [But][Lean][Light][Msec][FF]

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SDL_VIDEODRIVER='dummy'
 # xvfb-run
 
 #chin

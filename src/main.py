@@ -70,13 +70,19 @@ if __name__ == "__main__":
 	# green visible font
 
 	client.addPlayerToEndpoint(endpoint,userinfo,name)
-	#client.addPlayerToEndpoint(endpoint,userinfo,name)
-	# client.addPlayerToEndpoint(endpoint,userinfo,name)
-	# client.addPlayerToEndpoint(endpoint,userinfo,name)
-	# client.addPlayerToEndpoint(endpoint,userinfo,name)
-	# client.addPlayerToEndpoint(endpoint,userinfo,name)
-	# client.addPlayerToEndpoint(endpoint,userinfo,name)
-
+	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	client.addPlayerToEndpoint(endpoint,userinfo,name)
+	client.addPlayerToEndpoint(endpoint,userinfo,name)
 	# endpoint = client.addEndpoint("5.135.46.179","28926")
 	# client.addPlayerToEndpoint(endpoint,userinfo,name)
 
