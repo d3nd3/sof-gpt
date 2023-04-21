@@ -202,7 +202,7 @@ class GPT_COMMANDS:
 			return
 		cl_run = int(data)
 		if cl_rum == 0 or cl_run == 1:
-			p.input.isRunning = cl_run
+			p.isRunning = cl_run
 			util.say( p ,  f"cl_run is now {p.isRunning}" )
 
 

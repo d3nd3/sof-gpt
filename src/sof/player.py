@@ -72,9 +72,6 @@ class UserInput:
 		self.moveLeft = False
 		self.moveRight = False
 
-		self.isRunning = True
-		self.isPredicting = False
-
 		self.fire = False
 		self.altfire = False
 
@@ -114,6 +111,9 @@ class Player:
 
 		self.forward_speed = 100
 
+		self.isRunning = True
+		self.isPredicting = True
+
 		self.uc_null = UserCmd(0)
 		# Internal to firing mechanics
 		self.internal_allowed_to_fire = 2
@@ -127,8 +127,6 @@ class Player:
 		userinfo["name"] = name + self.textColor
 		self.userinfo = userinfo
 		self.past_userinfo = self.userinfo.copy()
-
-		
 
 
 	def initialize(self):
@@ -157,6 +155,9 @@ class Player:
 	# soft cleaning of inputs values
 	def reinit_usercmd(self):
 		self.viewangles = [0,0,0]
+
+		# this resets predicting which is a userinfo essentially.
+		# thus removed isPredicting and isRunning into player.
 		self.input = UserInput()
 		self.uc_oldest = UserCmd(self.main.msec_sleep)
 		self.uc_now = UserCmd(self.main.msec_sleep)
@@ -164,14 +165,14 @@ class Player:
 		self.uc_oldest = UserCmd(self.main.msec_sleep)
 
 		# depends on userinfo and sets userinfo
-		self.setPredicting(self.input.isPredicting)
+		self.setPredicting(self.isPredicting)
 
 	def setPredicting(self,val):
 		if val:
-			self.input.isPredicting = True
+			self.isPredicting = True
 			self.userinfo["predicting"] = "1"
 		else:
-			self.input.isPredicting = False
+			self.isPredicting = False
 			self.userinfo["predicting"] = "0"
 
 	def make_userinfo(self):
@@ -355,7 +356,7 @@ class Player:
 		# else:
 		# 	self.internal_allowed_to_fire_basic = True
 
-		if self.input.isRunning:
+		if self.isRunning:
 			cmd.buttonsPressed |= BUTTON_RUN
 
 		if self.input.leanRight:
@@ -369,7 +370,7 @@ class Player:
 		Seems they control the rate of fire by not allowing you to fire 2 consecutive packets
 		Lets simulate fast toggle then
 		"""
-		if self.input.isPredicting and self.input.fire and self.internal_allowed_to_fire >= 2:
+		if self.isPredicting and self.input.fire and self.internal_allowed_to_fire >= 2:
 		# if player.isPredicting and state.fireEvent and time_now - player.internal_allowed_to_fire_timer > 0.1:
 			# want to fire
 			cmd.fireEvent = 1.0
@@ -380,7 +381,7 @@ class Player:
 			# 2 frames inactive
 			self.internal_allowed_to_fire += 1
 
-		if self.input.isPredicting and self.input.altfire and self.internal_allowed_to_fire2:
+		if self.isPredicting and self.input.altfire and self.internal_allowed_to_fire2:
 			# state.fireEvent forced to default 0.0 every frame
 			cmd.altFireEvent = 1.0
 			self.internal_allowed_to_fire2 = False

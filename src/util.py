@@ -19,6 +19,7 @@ def say(player,msg):
 	player.conn.append_string_to_reliable(f"\x04say {msg}\x00")
 
 
+# Normal for sofgpt to change userinfo when outputting gpt text (altenrating text color)
 def changeTextColor(player,newColor):
 	c = player.userinfo["name"]
 	player.userinfo["name"] = c[:-1] + newColor
