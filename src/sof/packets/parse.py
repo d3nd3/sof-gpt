@@ -231,7 +231,7 @@ def svc_spawnbaseline(conn,player,view):
 		fail = True
 		find_more_base = data.find(b"\x0dcmd baselines ",0)
 		if find_more_base >= 0:
-			pattern = r"\x0d(cmd baselines .*)\x0a"
+			pattern = r"\x0dcmd (baselines .*)\x0a"
 			match = re.search(pattern, data[find_more_base:].decode("latin-1"))
 			if match:
 				conn.append_string_to_reliable(f"\x04{match.group(1)}\x00")

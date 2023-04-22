@@ -176,6 +176,13 @@ class GPT_COMMANDS:
 		p.userinfo["skin"] = data
 		util.say(p,f"skin is now {data}")
 
+	def name(p, data):
+		if not len(data):
+			util.say(p, f"name is {p.userinfo['name']}")
+			return
+		p.userinfo["name"] = data + p.main.gpt["toggle_color_1"]
+		util.say(p,f"name is now {data}")
+
 	# Server does not allow you to set predicting 1 after connection
 	# But does allow you to turn it off
 	def predicting(p, data):
@@ -301,6 +308,7 @@ sof_chat_settings = {
 
 	"spectator": (lambda p, data: GPT_COMMANDS.spectator(p, data)),
 	"skin": (lambda p, data: GPT_COMMANDS.skin(p, data)),
+	"name": (lambda p, data: GPT_COMMANDS.name(p, data)),
 	"predicting": (lambda p, data: GPT_COMMANDS.predicting(p, data)),
 
 	"forward_speed": (lambda p, data: GPT_COMMANDS.forward_speed(p, data)),
@@ -398,14 +406,16 @@ def output_gpt(main,player,conn):
 			else:
 				color = main.gpt["toggle_color_1"]
 				
-
+			# this has a delayed effect because userinfo is appended last.
+			# thus you are specifying color for next message
 			util.changeTextColor(player,color)
 			conn.append_string_to_reliable(f"\x04say {chunks[0]}\x00")
 	
 			len_prev = len(chunks[0])
 			if len(chunks) == 1:
 				# cleanup
-				util.changeTextColor(player,player.textColor)
+				# restores original text color, necessary?
+				# util.changeTextColor(player,player.textColor)
 				chunks = []
 				len_prev = 0
 			else:

@@ -50,7 +50,7 @@ if __name__ == "__main__":
 		"spectator_password" 	: "specme",
 		"password"				: "player",
 		"cl_violence"			: "0",
-		"spectator"				: "0",
+		"spectator"				: "1",
 		"skin"					: "widowmaker",
 		"teamname"				: "Ministry of Sin",
 		"fov"					: "95",
@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
 	# 16+ player unconnectable client struggles.
 	# 13 clients = message over flow. ( 2 + 11)
-	for i in range(0,1):
+	for i in range(0,8):
 		print(i,"clients")
 		client.addPlayerToEndpoint(endpoint,userinfo,name)
 	

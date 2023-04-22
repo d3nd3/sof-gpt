@@ -122,9 +122,10 @@ class Player:
 		self.internal_allowed_to_fire2 = True
 
 		# userinfo dict creation
-		self.textColor = P_GREEN
 		# use player.make_userinfo to return the slash seperated string form.
-		userinfo["name"] = name + self.textColor
+
+		# name should start out color-less.
+		userinfo["name"] = name + main.gpt["toggle_color_1"]
 		self.userinfo = userinfo
 		self.past_userinfo = self.userinfo.copy()
 
@@ -349,15 +350,17 @@ class Player:
 			cmd.upspeed = -200
 
 		# buttonn lean lightlevel
-		# respawn / non-predicting
-		# if ( self.input.fire or self.isPredicting ) and self.internal_allowed_to_fire_basic:
-		# 	cmd.buttonsPressed |= BUTTON_ATTACK
-		# 	self.internal_allowed_to_fire_basic = False
-		# else:
-		# 	self.internal_allowed_to_fire_basic = True
-
+		
+	
 		if self.isRunning:
 			cmd.buttonsPressed |= BUTTON_RUN
+
+		# respawn / non-predicting
+		if ( self.input.fire or self.isPredicting ) and self.internal_allowed_to_fire_basic:
+			cmd.buttonsPressed |= BUTTON_ATTACK
+			self.internal_allowed_to_fire_basic = False
+		else:
+			self.internal_allowed_to_fire_basic = True
 
 		if self.input.leanRight:
 			cmd.lean = 1
