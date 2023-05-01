@@ -35,11 +35,8 @@ def mem_to_str(memview):
 	return byte_to_str(memview.tobytes())
 
 
-def print_bits(bytes_obj,nlen,bitpos,n_bits):
-	if nlen != n_bits:
-		print(f"bit not match , expected { nlen } , got { n_bits }")
-		sys.exit(1)
+def print_bits(bytes_obj,nlen,bitpos=0):
 	bytepos = bitpos // 8
 	bytes_obj = bytes_obj[bytepos:]
-	bits = ''.join(format(byte, '08b') for byte in bytes_obj)
-	print(bits[:n_bits])
+	bits = ''.join(format(byte, '08b')[::-1] for byte in bytes_obj)
+	print(bits[:nlen*8])

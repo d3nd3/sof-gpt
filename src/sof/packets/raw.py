@@ -142,7 +142,7 @@ def simpleDeltaUsercmd(player,bitbuffer):
 # They should all be able to write zero, for going from an active to inactive state.
 
 # When upspeed is not zero, you can fly weirdly
-def deltaUsercmd(player,bitbuffer,deltafrom,deltato):
+def deltaUsercmd(player,bitbuffer,deltafrom,deltato, debugPrint):
 
 	d = bytearray(4)
 
@@ -150,21 +150,21 @@ def deltaUsercmd(player,bitbuffer,deltafrom,deltato):
 	# **************************PITCH*********************************
 	# */
 	if deltato.pitch != deltafrom.pitch:
-		dataToBits(bitbuffer,one,1)
+		dataToBits(bitbuffer,one,1,debugPrint,debugPrintName="pitchActive")
 		struct.pack_into('<h',d,0,deltato.pitch)
-		dataToBits(bitbuffer,d,12)
+		dataToBits(bitbuffer,d,12,debugPrint,debugPrintName="pitchValue")
 	else:
-		dataToBits(bitbuffer,zero,1)
+		dataToBits(bitbuffer,zero,1,debugPrint,debugPrintName="pitchActive")
 
 	# /*
 	# **************************YAW*********************************
 	# */
 	if deltato.yaw != deltafrom.yaw:
-		dataToBits(bitbuffer,one,1)
+		dataToBits(bitbuffer,one,1,debugPrint,debugPrintName="yawActive")
 		struct.pack_into('<h',d,0,deltato.yaw)
-		dataToBits(bitbuffer,d,12)
+		dataToBits(bitbuffer,d,12,debugPrint,debugPrintName="yawValue")
 	else:
-		dataToBits(bitbuffer,zero,1)
+		dataToBits(bitbuffer,zero,1,debugPrint,debugPrintName="yawActive")
 	
 	# else:
 	# 	# this resets aim? == bad?
@@ -174,66 +174,66 @@ def deltaUsercmd(player,bitbuffer,deltafrom,deltato):
 	# */
 	# print("ROLL")
 	if deltato.roll != deltafrom.roll:
-		dataToBits(bitbuffer,one,1)
+		dataToBits(bitbuffer,one,1,debugPrint,debugPrintName="rollActive")
 		struct.pack_into('<h',d,0,deltato.roll)
-		dataToBits(bitbuffer,d,12)
+		dataToBits(bitbuffer,d,12,debugPrint,debugPrintName="rollValue")
 	else:
-		dataToBits(bitbuffer,zero,1)
+		dataToBits(bitbuffer,zero,1,debugPrint,debugPrintName="rollActive")
 	# 
 	# **************************FORWARDMOVE*********************************
 	# 
 	# print("FORWARD")
 	if deltato.forwardspeed != deltafrom.forwardspeed:
-		dataToBits(bitbuffer,one,1)
+		dataToBits(bitbuffer,one,1,debugPrint,debugPrintName="forwardActive")
 		struct.pack_into('<H',d,0,tenbit(deltato.forwardspeed))
-		dataToBits(bitbuffer,d,10)
+		dataToBits(bitbuffer,d,10,debugPrint,debugPrintName="forwardValue")
 	else:
 		# unchanged from previous
-		dataToBits(bitbuffer,zero,1)
+		dataToBits(bitbuffer,zero,1,debugPrint,debugPrintName="forwardActive")
 	
 	# /*
 	# **************************SIDEMOVE*********************************
 	# */
 	# print("SIDEMOVE")
 	if deltato.sidespeed != deltafrom.sidespeed:
-		dataToBits(bitbuffer,one,1)
+		dataToBits(bitbuffer,one,1,debugPrint,debugPrintName="sideActive")
 		struct.pack_into('<H',d,0,tenbit(deltato.sidespeed))
-		dataToBits(bitbuffer,d,10)
+		dataToBits(bitbuffer,d,10,debugPrint,debugPrintName="sideValue")
 	else:
 		# unchanged from previous
-		dataToBits(bitbuffer,zero,1)
+		dataToBits(bitbuffer,zero,1,debugPrint,debugPrintName="sideActive")
 
 	# /*
 	# **************************UPMOVE*********************************
 	# */
 	# print("UPMOVE")
 	if deltato.upspeed != deltafrom.upspeed:
-		dataToBits(bitbuffer,one,1)
+		dataToBits(bitbuffer,one,1,debugPrint,debugPrintName="upActive")
 		struct.pack_into('<H',d,0,tenbit(deltato.upspeed))
-		dataToBits(bitbuffer,d,10)
+		dataToBits(bitbuffer,d,10,debugPrint,debugPrintName="upValue")
 	else:
 		# unchanged from previous
-		dataToBits(bitbuffer,zero,1)
+		dataToBits(bitbuffer,zero,1,debugPrint,debugPrintName="upActive")
 
 	
 	# BUTTONS
 	if deltato.buttonsPressed != deltafrom.buttonsPressed:
-		dataToBits(bitbuffer,one,1)
-		dataToBits(bitbuffer,bytes((deltato.buttonsPressed,)),8)
+		dataToBits(bitbuffer,one,1,debugPrint,debugPrintName="buttonsActive")
+		dataToBits(bitbuffer,bytes((deltato.buttonsPressed,)),8,debugPrint,debugPrintName="buttonsValue")
 	else:
 		# unchanged from previous
-		dataToBits(bitbuffer,zero,1)
+		dataToBits(bitbuffer,zero,1,debugPrint,debugPrintName="buttonsActive")
 
 	# LEAN - reduces msec by 1 bit when active
 	if deltato.lean != deltafrom.lean:
-			dataToBits(bitbuffer,one,1,debugPrint=False,debugPrintName="LeanActive",flip=False)
+			dataToBits(bitbuffer,one,1,debugPrint,debugPrintName="LeanActive",flip=False)
 			if deltato.lean == 2:
-				dataToBits(bitbuffer,bytes((0,)),1,debugPrint=False,debugPrintName="LeanLeft")
+				dataToBits(bitbuffer,bytes((0,)),1,debugPrint,debugPrintName="LeanLeft")
 			else:
-				dataToBits(bitbuffer,bytes((1,)),1,debugPrint=False,debugPrintName="LeanRight")
+				dataToBits(bitbuffer,bytes((1,)),1,debugPrint,debugPrintName="LeanRight")
 	else:
 		# unchanged from previous
-		dataToBits(bitbuffer,zero,1,debugPrint=False,debugPrintName="LeanUnchanged")
+		dataToBits(bitbuffer,zero,1,debugPrint,debugPrintName="LeanUnchanged")
 
 
 	# [But][Lean][Light][Msec][FF]
@@ -243,47 +243,47 @@ def deltaUsercmd(player,bitbuffer,deltafrom,deltato):
 	# lightlevel - used for visibility a.i of computer to target you?
 
 
-	if deltato.lightLevel != deltato.lightLevel:
-		dataToBits(bitbuffer,one,1)
-		dataToBits(bitbuffer,bytes((deltato.lightLevel,)),5)
+	if deltato.lightLevel != deltafrom.lightLevel:
+		dataToBits(bitbuffer,one,1,debugPrint,debugPrintName="lightActive")
+		dataToBits(bitbuffer,bytes((deltato.lightLevel,)),5,debugPrint,debugPrintName="lightValue")
 
 	else:
 		# unchanged from previous
-		dataToBits(bitbuffer,zero,1)
+		dataToBits(bitbuffer,zero,1,debugPrint,debugPrintName="lightActive")
 
 	# print("MSEC")
-	dataToBits(bitbuffer,bytes((deltato.msec,)),8)
+	dataToBits(bitbuffer,bytes((deltato.msec,)),8,debugPrint,debugPrintName="msecValue")
 
 
 	# pred fire
 	if deltato.fireEvent != deltafrom.fireEvent:
-		dataToBits(bitbuffer,one,1)
+		dataToBits(bitbuffer,one,1,debugPrint,debugPrintName="fireActive")
 		struct.pack_into('<f',d,0,deltato.fireEvent)
-		dataToBits(bitbuffer,d,32)
+		dataToBits(bitbuffer,d,32,debugPrint,debugPrintName="fireValue")
 
 	else:
 		# unchanged from previous
-		dataToBits(bitbuffer,zero,1)
+		dataToBits(bitbuffer,zero,1,debugPrint,debugPrintName="fireActive")
 
 		
 	if deltato.altFireEvent != deltafrom.altFireEvent:
-		dataToBits(bitbuffer,one,1)
+		dataToBits(bitbuffer,one,1,debugPrint,debugPrintName="altFireActive")
 		struct.pack_into('<f',d,0,deltato.altFireEvent)
-		dataToBits(bitbuffer,d,32)
+		dataToBits(bitbuffer,d,32,debugPrint,debugPrintName="altFireValue")
 	else:
 		# unchanged from previous
-		dataToBits(bitbuffer,zero,1)
+		dataToBits(bitbuffer,zero,1,debugPrint)
 
 
 
-def completeUserCommandBitBuffer(player,return_buffer):
+def completeUserCommandBitBuffer(player,return_buffer, debugPrint=False):
 	global bitpos
 	bitpos = 0
 
 	# player,bitbuffer,deltafrom,deltato
-	deltaUsercmd(player,return_buffer,player.uc_null,player.uc_oldest)
-	deltaUsercmd(player,return_buffer,player.uc_oldest,player.uc_old)
-	deltaUsercmd(player,return_buffer,player.uc_old,player.uc_now)
+	deltaUsercmd(player,return_buffer,player.uc_null,player.uc_oldest,debugPrint)
+	deltaUsercmd(player,return_buffer,player.uc_oldest,player.uc_old,debugPrint)
+	deltaUsercmd(player,return_buffer,player.uc_old,player.uc_now,debugPrint)
 
 
 	player.uc_oldest = copy.deepcopy(player.uc_old)
@@ -311,12 +311,11 @@ def	COM_BlockSequenceCRCByte (base, sequence):
 	base.append((sequence & 0xff) ^ p[0])
 	base.append(p[1])
 	base.append(((sequence>>8) & 0xff) ^ p[2])
+	# base.append((sequence>>8) ^ p[2])
 	base.append(p[3])
 	
 	# md5 here
 	# print(hashlib.new('md4',base).hexdigest())
-
-	# print(f"base is " + "".join("\\x{0:02x}".format(x) for x in base))
 
 	h = hashlib.new('md4',base).digest()
 	d1 = struct.unpack_from('<I',h,0)[0]
@@ -328,6 +327,16 @@ def	COM_BlockSequenceCRCByte (base, sequence):
 	# print(hex(d3))
 	# print(hex(d4))
 	checksum = (d1 ^ d2 ^ d3 ^ d4) 
-	# print(f'checksum is {checksum}')
-	# print(f'checksum is {checksum& 0xff}')
+
+	if sequence == 436:
+		print(f"p3 is : {p[3]}")
+		cmd = base[4:-4]
+		print(base[:4].hex())
+		print(f"base is " + "".join("\\x{0:02x}".format(x) for x in cmd))
+		print(base[-4:])
+
+		util.print_bits(cmd,len(cmd))
+		print(h.hex())
+		# print(f'checksum is {checksum}')
+		print(f'checksum is {hex(checksum & 0xff)}')
 	return checksum & 0xff;

@@ -228,8 +228,15 @@ class Player:
 		# fill the 'buffer'
 
 		written_buffer = bytearray(128)
-		written_bytes = completeUserCommandBitBuffer(self,written_buffer);
-		
+		debugPrint=False
+		if self.conn.our_seq == 436:
+			debugPrint=True
+		written_bytes = completeUserCommandBitBuffer(self,written_buffer,debugPrint=debugPrint);
+
+		if self.conn.our_seq == 436:
+			# print all bytes in written_buffer as hex bytes
+			print(f"written_buffer = {written_buffer.hex()}")
+
 		buffer2 += written_buffer[:written_bytes]
 		
 		# update lastServerFrame
@@ -252,12 +259,17 @@ class Player:
 		# length move_command and checksum byte ignored 6-2 = 4
 
 		# byte *base, int length, int sequence
+		# 4 bytes at beginning = lastServerFrame, 4 bytes at end = checksum appended bytes.
 		blossom = COM_BlockSequenceCRCByte(buffer2[move_start+2:],self.conn.our_seq);
 		# print(f'blossom is {blossom}\n')
 		buffer2[1] = blossom
 
-		# util.pretty_dump(buffer2[move_start+2:])
 		# print(f"seq was {self.conn.our_seq} and blossom is {hex(blossom)}")
+
+		# util.pretty_dump(buffer2[move_start+2:])
+
+		# print("\n\n")
+		
 
 		# THUS :clc_move is unreliable
 		
@@ -287,7 +299,7 @@ class Player:
 		# this this causes bug for player assume always have to send?
 		# if state.pitch_before != state.pitch:
 		# changed
-		cmd.pitch = self.viewangles[0] - (self.delta_pitch // 16)
+		cmd.pitch = self.viewangles[0] - round(self.delta_pitch / 16)
 		if cmd.pitch < -2048:
 			cmd.pitch += 4096
 		elif cmd.pitch > 2047:
@@ -306,7 +318,7 @@ class Player:
 		if self.custom_yaw != 9999:
 			self.viewangles[1] = self.custom_yaw
 
-		cmd.yaw = self.viewangles[1] - (self.delta_yaw // 16)
+		cmd.yaw = self.viewangles[1] - round(self.delta_yaw / 16)
 		if cmd.yaw < -2048:
 			cmd.yaw += 4096
 		elif cmd.yaw > 2047:
@@ -325,7 +337,7 @@ class Player:
 		if self.custom_roll != 9999:
 			self.viewangles[2] = self.custom_roll
 
-		cmd.roll = self.viewangles[2] - (self.delta_roll // 16)
+		cmd.roll = self.viewangles[2] - round(self.delta_roll / 16)
 		if cmd.roll < -2048:
 			cmd.roll += 4096
 		elif cmd.roll > 2047:
@@ -367,6 +379,7 @@ class Player:
 		elif self.input.leanLeft:
 			cmd.lean = 2
 
+		# cmd.lightLevel = 90
 		cmd.lightLevel = 0x5
 
 		"""
