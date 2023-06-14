@@ -47,8 +47,8 @@ if __name__ == "__main__":
 	# name and predicting overriden inside player.py
 	userinfo = {
 		"predicting"			: "1",
-		"spectator_password" 	: "specme",
-		"password"				: "player",
+		"spectator_password" 	: "acadie",
+		"password"				: "acadie",
 		"cl_violence"			: "0",
 		"spectator"				: "1",
 		"skin"					: "widowmaker",
@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
 	# 16+ player unconnectable client struggles.
 	# 13 clients = message over flow. ( 2 + 11)
-	for i in range(0,1):
+	for i in range(0,5):
 		print(i,"clients")
 		client.addPlayerToEndpoint(endpoint,userinfo,name)
 	
