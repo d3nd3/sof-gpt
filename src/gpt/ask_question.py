@@ -10,6 +10,10 @@ from selenium.webdriver.chrome.service import Service
 # from selenium_stealth import stealth
 
 import undetected_chromedriver as uc
+from webdriver_manager.core.os_manager import OperationSystemManager,ChromeType
+
+br_ver = OperationSystemManager().get_browser_version_from_os(ChromeType.CHROMIUM)
+version_main=int(br_ver.split('.')[0])
 
 import functools
 print = functools.partial(print, flush=True)
@@ -26,7 +30,7 @@ def contact(question,keep_alive_func=None):
 	# options.add_argument("--headless")
 	
 	# driver = webdriver.Chrome(chromium_driver,options=options)
-	driver = uc.Chrome(options=options, version_main=111)
+	driver = uc.Chrome(options=options, version_main=version_main)
 	driver.get('https://chat.openai.com/chat')
 
 	# stealth(driver,
