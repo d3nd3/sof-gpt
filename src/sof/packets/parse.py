@@ -243,7 +243,7 @@ def svc_spawnbaseline(conn,player,view):
 		
 		if fail:
 			print("Ooops cannot enter server no precache dead end\n")
-			player.endpoint.removePlayer(p)
+			player.endpoint.removePlayer(player)
 	
 	return None
 
@@ -590,24 +590,100 @@ def svc_cinprint(conn,player,view):
 
 def svc_playernamecols(conn,player,view):
 	return None
-
+# [short] string index [color]
 def svc_sp_print(conn,player,view):
+	
+	stringPackageIndex = view[0]
 	view=view[1:]
-	s,view = Parser.string(view)
-	print("PACKET: sp_print\n",s.tobytes(),s.tobytes().decode('ISO 8859-1'))
+
+	stringPackageId = view[0]
+	view=view[1:]
+
+	# color = view[0]
+	# view=view[1:]
+
+	# s,view = Parser.string(view)
+	print(f"PACKET: sp_print : Index:{stringPackageIndex} Id:{stringPackageId}")
 	return view
 
 def svc_removeconfigstring(conn,player,view):
 	return None
 
+# [short] string index
+# [byte] count of data bytes 
+# [data bytes] 
+# [color] at end of bytes
 def svc_sp_print_data_1(conn,player,view):
-	return None
 
+	stringPackageIndex = view[0]
+	view=view[1:]
+
+	stringPackageId = view[0]
+	view=view[1:]
+
+	dataBytes=view[0]
+	view=view[1:]
+
+	data=view[:dataBytes]
+	view=view[dataBytes:]
+
+	# util.pretty_dump(data)
+
+	# color = view[0]
+	# view=view[1:]
+
+	if stringPackageId == 0: #GENERAL
+		if stringPackageIndex == 61:
+			print(f"[GENERAL] {util.mem_to_str(data)} entered the game.")
+	if stringPackageId == 17: #SOFPLUS
+		if stringPackageIndex == 0:
+			# slot == data[:4]
+			print(f"[SOFPLUS] Incoming player [{struct.unpack_from('<i',data,0)[0]}]: {util.mem_to_str(data[4:-1])}")
+		if stringPackageIndex == 21:
+			s,_ = Parser.string(data)
+			ss,_ = Parser.string(_)
+			print(f"[SOFPLUS] Timelimit={util.mem_to_str(s)} Remaining={util.mem_to_str(ss)}")
+	elif stringPackageId == 12: #BOT
+		if stringPackageIndex == 4:
+			print(f"[BOTS] {util.mem_to_str(data[4:-1])} disconnected.")
+	elif stringPackageId == 18: #CUSTOM
+		if stringPackageIndex == 12 or stringPackageIndex == 13 : #highscores
+			print(f"[CUSTOM] {util.mem_to_str(data)}")
+
+	print(f"PACKET: sp_print_data_1 : Id:{stringPackageId} Index:{stringPackageIndex} DataBytes:{dataBytes} Data:{data.tobytes()}")
+	return view
+# [short] string index 
+# [short] count of data bytes 
+# [data bytes] 
+# [color] at end of bytes
 def svc_sp_print_data_2(conn,player,view):
-	return None
+
+	stringPackageIndex = view[0]
+	view=view[1:]
+
+	stringPackageId = view[0]
+	view=view[1:]
+
+	dataBytes = struct.unpack_from('<H',view,0)[0]
+	view=view[2:]
+	# print(dataBytes)
+	data=view[:dataBytes]
+	view=view[dataBytes:]
+
+	# util.pretty_dump(data)
+	# color = view[0]
+	# view=view[1:]
+
+	
+	print(f"PACKET: sp_print_data_2 : Id:{stringPackageId} Index:{stringPackageIndex} DataBytes:{dataBytes} Data:{data.tobytes()}")
+
+	return view
 
 def svc_welcomeprint(conn,player,view):
-	return None
+	s,view = Parser.string(view)
+	s = util.mem_to_str(s)
+	print("PACKET: welcomeprint\n",s)
+	return view
 
 def svc_sp_print_obit(conn,player,view):
 	return None
