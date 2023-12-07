@@ -273,7 +273,8 @@ class Connection:
 			s=struct.unpack_from('<i',view,0)
 			if s[0] == -1:
 				# connectionless packet ?
-				print("[UNCONNECTED PACKET RECEIVED]: ",bytes(view),"\n")
+				# print("[UNCONNECTED PACKET RECEIVED]: ",bytes(view),"\n")
+				util.multiline_print(view)
 				return view[4:]
 			else:
 				# print("[CONNECTED PACKET RECEIVED]: ",bytes(view),"\n")
