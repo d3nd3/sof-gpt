@@ -328,6 +328,7 @@ def	COM_BlockSequenceCRCByte (base, sequence):
 	# print(hex(d4))
 	checksum = (d1 ^ d2 ^ d3 ^ d4) 
 
+	"""
 	if sequence == 436:
 		print(f"p3 is : {p[3]}")
 		cmd = base[4:-4]
@@ -339,4 +340,5 @@ def	COM_BlockSequenceCRCByte (base, sequence):
 		print(h.hex())
 		# print(f'checksum is {checksum}')
 		print(f'checksum is {hex(checksum & 0xff)}')
+	"""
 	return checksum & 0xff;

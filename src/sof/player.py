@@ -229,14 +229,16 @@ class Player:
 
 		written_buffer = bytearray(128)
 		debugPrint=False
-		if self.conn.our_seq == 436:
-			debugPrint=True
+		# if self.conn.our_seq == 436:
+		# 	debugPrint=True
 		written_bytes = completeUserCommandBitBuffer(self,written_buffer,debugPrint=debugPrint);
 
+		"""
 		if self.conn.our_seq == 436:
 			# print all bytes in written_buffer as hex bytes
 			print(f"written_buffer = {written_buffer.hex()}")
-
+		"""
+		
 		buffer2 += written_buffer[:written_bytes]
 		
 		# update lastServerFrame

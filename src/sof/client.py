@@ -3,15 +3,22 @@ from sof.connection import Endpoint
 
 from sof.chat_bridge import output_gpt
 
-import time
-
 from sof.packets.defines import *
 
-import sof.keys
+import sof.packets.types as types
 
+import sof.keys
+import util
+
+import time
 import pygame
 
 import sys
+import math
+import threading
+from queue import Queue
+
+
 
 # this class represents the entire tool.
 # ideally handles multiple connections
@@ -37,12 +44,18 @@ class SofClient:
 		}
 
 		self.connectedCount = 0
-		self.msec_sleep = 7
-		self.float_sleep = 7 / 1000
-		self.target_fps = round(1000/7)
+
+		self.FPS = 10
+		self.msec_sleep = math.ceil(1000/self.FPS) #change this
+		self.float_sleep = self.msec_sleep / 1000 #in secs
+		self.target_fps = round(1000/self.msec_sleep)
 
 		self.framecount = 0
 		self.main_begin = self.before_cpu = time.time()
+
+		# thread safe queue
+		self.user_input_queue = Queue()
+
 		
 	# if connection already exists, append a player, else both
 	def addEndpoint(self,host,port):
@@ -77,7 +90,16 @@ class SofClient:
 				if not len(e.players):
 					print("Exiting: no more valid players exist.")
 					sys.exit(1)
+
 				c = player.conn
+
+				# do this before recv(), since recv() can set connection parameters.
+				if c.connected < 2:
+					# from connected to disconnected/connecting
+					if player.wasConnected == 2:
+						self.connectedCount -=1
+						print(f"DISCONNECTED: New Total : {self.connectedCount}")
+
 				c.recv()
 				# TODO: THERE IS BUG ON SOME MAPS THAT START PACKET WITH SVC_TMP_ENTITY
 				
@@ -94,13 +116,9 @@ class SofClient:
 					if player.wasConnected != 2:
 						self.connectedCount +=1
 						print(f"CONNECTED: New Total : {self.connectedCount}")
-						# time.sleep(0.5)
+						time.sleep(0.1)
 						player.onEnterServer()
 
-				elif c.connected == 0:
-					if player.wasConnected > 0:
-						self.connectedCount -=1
-						print(f"DISCONNECTED: New Total : {self.connectedCount}")
 
 				if time.time() - player.conn.last_packet_stamp > 15.0:
 					print("auto die no packet")
@@ -114,12 +132,33 @@ class SofClient:
 				if player.conn.connected == 2:
 					# its timer restricted. so it doesnt spam
 					output_gpt(self,player,player.conn)
+
+					# Check if there's user input in the queue
+					if not self.user_input_queue.empty():
+						user_input = self.user_input_queue.get()
+						# Now you can use the user_input in the main thread
+						# util.pretty_dump(util.str_to_byte(user_input))
+						c.append_string_to_reliable(f"{types.CLC_STRINGCMD}{user_input}\x00")
 				break
+				
+	def process_user_input(self):
+		# Implement your logic for processing user input here
+		while True:
+			user_input = input()
+			self.user_input_queue.put(user_input)
+
 	def beginLoop(self):
 		print("Starting sof-gpt...")
+
+		# Start a separate thread for user input
+		input_thread = threading.Thread(target=self.process_user_input)
+		input_thread.daemon = True
+		input_thread.start()
+
 		while True:
 			self.framecount += 1
 
+			#interacts with sof server
 			self.talkToWorld()
 
 			now = time.time()
@@ -130,7 +169,7 @@ class SofClient:
 				num_eps = len(self.endpoints)
 				num_players = len([ self.endpoints[e] for e in self.endpoints for p in self.endpoints[e].players ])
 
-				print(f"STATS: { num_eps } endpoints. With { len( [ self.endpoints[e] for e in self.endpoints for p in self.endpoints[e].players if p.conn.connected == 2 ])} connected players" )
+				# print(f"STATS: { num_eps } endpoints. With { len( [ self.endpoints[e] for e in self.endpoints for p in self.endpoints[e].players if p.conn.connected == 2 ])} connected players" )
 
 				if num_players == 0:
 					sys.exit(0)

@@ -95,10 +95,14 @@ def svc_sound(conn,player,view):
 def svc_print(conn,player,view):
 	view=view[1:]
 	s,view = Parser.string(view)
-	if s.tobytes().decode(('latin_1')) == "Server restarted\n":
+	s = util.mem_to_str(s)
+	if s == "Server restarted\n":
 		print("Server restart detected via print\n");
 		player.init = False
-	# print("PACKET: print\n",s.tobytes(),s.tobytes().decode('ISO 8859-1'))
+		return view
+
+	if "sof1.org/viewtopic.php?t=4660" not in s:
+		print("PACKET: print\n",s)
 
 	return view
 
@@ -588,7 +592,10 @@ def svc_playernamecols(conn,player,view):
 	return None
 
 def svc_sp_print(conn,player,view):
-	return None
+	view=view[1:]
+	s,view = Parser.string(view)
+	print("PACKET: sp_print\n",s.tobytes(),s.tobytes().decode('ISO 8859-1'))
+	return view
 
 def svc_removeconfigstring(conn,player,view):
 	return None
@@ -607,8 +614,6 @@ def svc_sp_print_obit(conn,player,view):
 
 def svc_force_con_notify(conn,player,view):
 	return None
-
-
 
 
 
