@@ -78,6 +78,14 @@ class UserInput:
 		self.leanRight = False
 		self.leanLeft = False
 
+		self.rightJoystickSensX = 1
+		self.rightJoystickSensY = 1
+
+		self.leftJoystickSensX = 1
+		self.rightJoystickSensY = 1
+
+		self.use = False
+
 
 # This now represents everything
 # The Connection is only related because of having hostname/port
@@ -101,9 +109,9 @@ class Player:
 		self.custom_yaw = 9999
 		self.custom_roll = 9999
 
-		self.pitch_speed = 15
-		self.yaw_speed = 15
-		self.roll_speed = 15
+		self.pitch_speed = 25
+		self.yaw_speed = 98
+		self.roll_speed = 25
 
 		self.delta_pitch = 0
 		self.delta_yaw = 0
@@ -160,10 +168,10 @@ class Player:
 		# this resets predicting which is a userinfo essentially.
 		# thus removed isPredicting and isRunning into player.
 		self.input = UserInput()
-		self.uc_oldest = UserCmd(self.main.msec_sleep)
-		self.uc_now = UserCmd(self.main.msec_sleep)
-		self.uc_old = UserCmd(self.main.msec_sleep)
-		self.uc_oldest = UserCmd(self.main.msec_sleep)
+		self.uc_oldest = UserCmd(self.main.msec_sleep if self.main.msec_sleep < 256 else 255)
+		self.uc_now = UserCmd(self.main.msec_sleep if self.main.msec_sleep < 256 else 255)
+		self.uc_old = UserCmd(self.main.msec_sleep if self.main.msec_sleep < 256 else 255)
+		self.uc_oldest = UserCmd(self.main.msec_sleep if self.main.msec_sleep < 256 else 255)
 
 		# depends on userinfo and sets userinfo
 		self.setPredicting(self.isPredicting)
@@ -284,14 +292,14 @@ class Player:
 		# pitch
 		cmd = self.uc_now
 		# start from 0
-		cmd.__init__(self.main.msec_sleep)
+		cmd.__init__(self.main.msec_sleep if self.main.msec_sleep < 256 else 255)
 
 		if self.input.lookUp:
-			self.viewangles[0] -= self.pitch_speed
+			self.viewangles[0] -= int(round(self.pitch_speed*self.input.rightJoystickSensY))
 			if self.viewangles[0] < -2048 :
 				self.viewangles[0] += 4096
 		elif self.input.lookDown:
-			self.viewangles[0] += self.pitch_speed
+			self.viewangles[0] += int(round(self.pitch_speed*self.input.rightJoystickSensY))
 			if self.viewangles[0] > 2047:
 				self.viewangles[0] -= 4096
 
@@ -309,11 +317,11 @@ class Player:
 
 		# yaw
 		if self.input.lookRight:
-			self.viewangles[1] -= self.yaw_speed
+			self.viewangles[1] -= int(round(self.yaw_speed*self.input.rightJoystickSensX))
 			if self.viewangles[1] < -2048 :
 				self.viewangles[1] += 4096
 		elif self.input.lookLeft:
-			self.viewangles[1] += self.yaw_speed
+			self.viewangles[1] += int(round(self.yaw_speed*self.input.rightJoystickSensX))
 			if self.viewangles[1] > 2047:
 				self.viewangles[1] -= 4096
 
@@ -347,9 +355,9 @@ class Player:
 
 		# forward/backward
 		if self.input.moveBack:
-			cmd.forwardspeed = -200
+			cmd.forwardspeed = int(round(-200* self.input.leftJoystickSensY))
 		elif self.input.moveForward:
-			cmd.forwardspeed = 200
+			cmd.forwardspeed = int(round(200 * self.input.leftJoystickSensY))
 
 		# left/right
 		if self.input.moveLeft:
@@ -365,6 +373,9 @@ class Player:
 
 		# buttonn lean lightlevel
 		
+		if self.input.use:
+			cmd.buttonsPressed |= BUTTON_ACTION
+
 	
 		if self.isRunning:
 			cmd.buttonsPressed |= BUTTON_RUN

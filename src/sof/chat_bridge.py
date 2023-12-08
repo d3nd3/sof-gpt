@@ -99,9 +99,9 @@ class GPT_COMMANDS:
 		p.input.altfire = False
 
 	def plus_use(p, data):
-		p.uc_now.buttonsPressed |= BUTTON_ACTION
+		p.input.use = True
 	def minus_use(p, data):
-		p.uc_now.buttonsPressed &= ~BUTTON_ACTION
+		p.input.use = False
 
 	def weaponselect(p, data):
 		weaponID = int(data)
@@ -232,16 +232,7 @@ class GPT_COMMANDS:
 		util.say(p,"test")
 
 	def quit(p,data):
-		util.say(p,f"Goodbye!")
-		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
-		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
-		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
-		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
-
-		# Remove self from endpoint
 		p.endpoint.removePlayer(p)
-
-		# Player is forgotten about now?
 
 
 sof_chat_inputs = {

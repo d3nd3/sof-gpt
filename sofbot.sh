@@ -7,7 +7,7 @@
 #b corner ctf
 #xvfb-run python3 src/main.py 54.39.52.55 28910 sofgpt
 #bots corner
-xvfb-run python3 src/main.py 54.39.52.55 28920 sofgpt
+python3 src/main.py 54.39.52.55 28920 sofgpt
 
 #acadie
 # python3 src/main.py 142.68.186.241 28950 heretic

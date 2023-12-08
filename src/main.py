@@ -8,6 +8,8 @@ from sof.packets.raw import COM_BlockSequenceCRCByte
 
 import pygame
 
+import sof.keys as keys
+
 
 def hex_string_to_bytearray(hex_string):
 	hex_list = hex_string.split()
@@ -43,6 +45,9 @@ if __name__ == "__main__":
 	pygame.init()
 	screen = pygame.display.set_mode((600, 600))
 
+	keys.init_gamepad()
+	# Create a clock object to control the frame rate
+	clock = pygame.time.Clock()
 	
 	# name and predicting overriden inside player.py
 	userinfo = {
@@ -58,7 +63,7 @@ if __name__ == "__main__":
 		"rate"					: "25000",
 		"allow_download_models" : "1",
 		"team_red_blue"			: "0",
-		"bestweap"				: "safe"
+		"bestweap"				: "" #safe/unsafe
 	}
 
 	
@@ -82,7 +87,7 @@ if __name__ == "__main__":
 	# endpoint = client.addEndpoint("5.135.46.179","28920")
 	# client.addPlayerToEndpoint(endpoint,userinfo,name)
 
-	client.beginLoop()
+	client.beginLoop(clock)
 
 
 

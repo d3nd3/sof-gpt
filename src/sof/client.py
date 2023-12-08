@@ -19,7 +19,6 @@ import threading
 from queue import Queue
 
 
-
 # this class represents the entire tool.
 # ideally handles multiple connections
 # and ideally there can be multiple players to a connection
@@ -45,8 +44,8 @@ class SofClient:
 
 		self.connectedCount = 0
 
-		self.FPS = 10
-		self.msec_sleep = math.ceil(1000/self.FPS) #change this
+		self.FPS = 30 #change this
+		self.msec_sleep = math.ceil(1000/self.FPS) #255 max for byte object msec command.
 		self.float_sleep = self.msec_sleep / 1000 #in secs
 		self.target_fps = round(1000/self.msec_sleep)
 
@@ -147,7 +146,7 @@ class SofClient:
 			user_input = input()
 			self.user_input_queue.put(user_input)
 
-	def beginLoop(self):
+	def beginLoop(self,clock):
 		print("Starting sof-gpt...")
 
 		# Start a separate thread for user input
@@ -175,6 +174,7 @@ class SofClient:
 					sys.exit(0)
 				# print(f"fps is {fps}")
 
+			"""
 			# ----sleep----
 			exec_time = time.time() - self.before_cpu
 			# too fast? sleep some
@@ -182,3 +182,5 @@ class SofClient:
 				time.sleep(self.float_sleep-exec_time)
 
 			self.before_cpu = time.time()
+			"""
+			clock.tick(self.target_fps)

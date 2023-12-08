@@ -5,7 +5,7 @@ import struct
 import errno
 
 from sof.packets.parse import Parser,packet_parsers
-from sof.packets.types import packetIDtoName
+from sof.packets.types import *
 
 import util
 
@@ -17,7 +17,18 @@ class Endpoint:
 		self.players = []
 
 	def removePlayer(self,player):
+		if player.conn.connected > 0:
+			util.say(player,f"Goodbye!")
+
+		player.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
+		player.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
+		player.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
+		player.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
+
+		# Remove self from endpoint
 		self.players.remove(player)
+
+		# Player is forgotten about now?
 
 # this class represents the network code required to talk to server
 # unique for each player , unique socket handle.
