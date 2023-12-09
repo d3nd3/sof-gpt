@@ -10,6 +10,8 @@ import sof.packets.types as types
 
 from sof.packets.defines import *
 
+from sof.keys import getJoystick
+
 import util
 
 class UserCmd:
@@ -109,9 +111,9 @@ class Player:
 		self.custom_yaw = 9999
 		self.custom_roll = 9999
 
-		self.pitch_speed = 25
-		self.yaw_speed = 98
-		self.roll_speed = 25
+		self.pitch_speed = 250
+		self.yaw_speed = 2050
+		self.roll_speed = 250
 
 		self.delta_pitch = 0
 		self.delta_yaw = 0
@@ -120,7 +122,10 @@ class Player:
 		self.forward_speed = 100
 
 		self.isRunning = True
-		self.isPredicting = True
+		if userinfo["predicting"] == "1":
+			self.isPredicting = True
+		else:
+			self.isPredicting = False
 
 		self.uc_null = UserCmd(0)
 		# Internal to firing mechanics
@@ -136,6 +141,12 @@ class Player:
 		userinfo["name"] = name + main.gpt["toggle_color_1"]
 		self.userinfo = userinfo
 		self.past_userinfo = self.userinfo.copy()
+
+		self.health = 100
+		self.armor = 0
+
+		self.prev_health = self.health
+		self.prev_armor = self.armor
 
 
 	def initialize(self):
@@ -295,11 +306,11 @@ class Player:
 		cmd.__init__(self.main.msec_sleep if self.main.msec_sleep < 256 else 255)
 
 		if self.input.lookUp:
-			self.viewangles[0] -= int(round(self.pitch_speed*self.input.rightJoystickSensY))
+			self.viewangles[0] -= int(round(self.pitch_speed*self.input.rightJoystickSensY* self.main.float_sleep)) 
 			if self.viewangles[0] < -2048 :
 				self.viewangles[0] += 4096
 		elif self.input.lookDown:
-			self.viewangles[0] += int(round(self.pitch_speed*self.input.rightJoystickSensY))
+			self.viewangles[0] += int(round(self.pitch_speed*self.input.rightJoystickSensY* self.main.float_sleep))
 			if self.viewangles[0] > 2047:
 				self.viewangles[0] -= 4096
 
@@ -317,11 +328,11 @@ class Player:
 
 		# yaw
 		if self.input.lookRight:
-			self.viewangles[1] -= int(round(self.yaw_speed*self.input.rightJoystickSensX))
+			self.viewangles[1] -= int(round(self.yaw_speed*self.input.rightJoystickSensX* self.main.float_sleep))
 			if self.viewangles[1] < -2048 :
 				self.viewangles[1] += 4096
 		elif self.input.lookLeft:
-			self.viewangles[1] += int(round(self.yaw_speed*self.input.rightJoystickSensX))
+			self.viewangles[1] += int(round(self.yaw_speed*self.input.rightJoystickSensX* self.main.float_sleep))
 			if self.viewangles[1] > 2047:
 				self.viewangles[1] -= 4096
 
@@ -355,9 +366,11 @@ class Player:
 
 		# forward/backward
 		if self.input.moveBack:
-			cmd.forwardspeed = int(round(-200* self.input.leftJoystickSensY))
+			# cmd.forwardspeed = int(round(-200* self.input.leftJoystickSensY))
+			cmd.forwardspeed = -200
 		elif self.input.moveForward:
-			cmd.forwardspeed = int(round(200 * self.input.leftJoystickSensY))
+			# cmd.forwardspeed = int(round(200 * self.input.leftJoystickSensY))
+			cmd.forwardspeed = 200
 
 		# left/right
 		if self.input.moveLeft:
@@ -366,15 +379,15 @@ class Player:
 			cmd.sidespeed = 160
 
 		# up/down
-		if self.input.moveUp:
-			cmd.upspeed = 200
-		elif self.input.moveDown:
+		if self.input.moveDown:
 			cmd.upspeed = -200
+		elif self.input.moveUp:
+			cmd.upspeed = 200
 
 		# buttonn lean lightlevel
 		
 		if self.input.use:
-			cmd.buttonsPressed |= BUTTON_ACTION
+			cmd.buttonsPressed |= BUTTON_USE
 
 	
 		if self.isRunning:
@@ -383,6 +396,10 @@ class Player:
 		# respawn / non-predicting
 		if ( self.input.fire or self.isPredicting ) and self.internal_allowed_to_fire_basic:
 			cmd.buttonsPressed |= BUTTON_ATTACK
+			j,low,high = getJoystick(high=0.7)
+			if j:
+				j.rumble(low, high, 20)
+				getJoystick(low=0)
 			self.internal_allowed_to_fire_basic = False
 		else:
 			self.internal_allowed_to_fire_basic = True

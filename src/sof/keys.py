@@ -4,7 +4,21 @@ import os
 import time
 from sof.packets.defines import *
 
+import random
+
 os.environ["SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS"] = "1"
+
+joystick = 0
+rumbleLow = 0
+rumbleHigh = 0
+def getJoystick(low=None,high=None):
+	global rumbleLow,rumbleHigh
+	
+	if low is not None:
+		rumbleLow = low
+	if high is not None:
+		rumbleHigh = high
+	return (joystick,rumbleLow,rumbleHigh)
 
 def init_gamepad():
 	global joystick
@@ -68,24 +82,45 @@ def keydown(p,key):
 def gamepad_button_down(p,button):
 	print(button)
 
-	if button == 0:
-		p.input.use = True
+	if button == 0:#a
+		p.conn.append_string_to_reliable(f"\x04itemuse\x00")
 		pass
-	elif button == 1:
+	elif button == 1:#b
 		p.conn.append_string_to_reliable(f"\x04weapnext\x00")
 		pass
-	elif button == 2:
+	elif button == 2:#x
 		p.conn.append_string_to_reliable(f"\x04weapprev\x00")
-	elif button == 3:
-		p.conn.append_string_to_reliable(f"\x04itemuse\x00")
+	elif button == 3:#y
+		p.input.use = True
+	elif button == 6:
+		# select button (left)
+		randWave = random.randint(0, 3)
+		p.conn.append_string_to_reliable(f"\x04wave {randWave}\x00")
+	elif button == 7:
+		# start button (right)
+		p.conn.append_string_to_reliable(f"\x04wave 4\x00")
+	elif button == 8:
+		#xbox button
+		p.input.moveDown = True
+		pass
+	elif button == 10:
+		#rightjoypush
+		pass
 
 def gamepad_button_up(p,button):
 	if button == 0: #A
-		p.input.use = False
+		pass
 	elif button == 1: #B
 		pass
 	elif button == 3:
+		p.input.use = False
 		pass
+	elif button == 7:
+		# menu button
+		pass
+	elif button == 8:
+		#xbox button
+		p.input.moveDown = False
 """
 It just sets forwardspeed.
 By default it will want to stand still.
@@ -113,29 +148,28 @@ def gamepad_dpad(p,states):
 		p.input.moveLeft = True
 		p.input.moveRight = False
 
-epsilon = 0.1
-epsilon2 = -epsilon
-
-ep_pitch = 0.25
-ep_pitch2 = -ep_pitch
 
 itemuseTimestamp = 0
 def gamepad_sticks(p,axis,value):
 	global itemuseTimestamp
+	# MOVE FORWARD/BACK
 	if axis == 1:
-		if value < epsilon and value > epsilon2:
+		V = 0.25
+		if value < V and value > -V:
 			p.input.moveForward = False
 			p.input.moveBack = False
 		elif value > 0:
-			p.input.leftJoystickSensY = abs(value)
+			# p.input.leftJoystickSensY = abs(value/(1-V))
 			p.input.moveForward = False
 			p.input.moveBack = True
 		elif value < 0:
-			p.input.leftJoystickSensY = abs(value)
+			# p.input.leftJoystickSensY = abs(value/(1-V))
 			p.input.moveForward = True
 			p.input.moveBack = False
+	# MOVE RIGHT/LEFT
 	elif axis == 0:
-		if value < epsilon and value > epsilon2:
+		V = 0.25
+		if value < V and value > -V:
 			p.input.moveRight = False
 			p.input.moveLeft = False
 		elif value > 0:
@@ -144,28 +178,32 @@ def gamepad_sticks(p,axis,value):
 		elif value < 0:
 			p.input.moveRight = False
 			p.input.moveLeft = True
+	# LOOK RIGHT/LEFT
 	elif axis == 3:
-		if value < epsilon and value > epsilon2:
+		V = 0.1
+		if value < V and value > -V:
 			p.input.lookLeft = False
 			p.input.lookRight = False
 		elif value > 0 :
-			p.input.rightJoystickSensX = abs(value)
+			p.input.rightJoystickSensX = abs(value/(1-V))
 			p.input.lookLeft = False
 			p.input.lookRight = True
 		elif value < 0 :
-			p.input.rightJoystickSensX = abs(value)
+			p.input.rightJoystickSensX = abs(value/(1-V))
 			p.input.lookLeft = True
 			p.input.lookRight = False
+	# LOOK UP/DOWN
 	elif axis == 4:
-		if value < ep_pitch and value > ep_pitch2:
+		V = 0.4
+		if value < V and value > -V:
 			p.input.lookDown = False
 			p.input.lookUp = False
 		elif value > 0 :
-			p.input.rightJoystickSensY = abs(value)
+			# p.input.rightJoystickSensY = abs(value/(1-V))
 			p.input.lookDown = True
 			p.input.lookUp = False
 		elif value < 0 :
-			p.input.rightJoystickSensY = abs(value)
+			# p.input.rightJoystickSensY = abs(value/(1-V))
 			p.input.lookDown = False
 			p.input.lookUp = True
 
@@ -173,7 +211,7 @@ def gamepad_sticks(p,axis,value):
 	elif axis == 2:
 		# L1 1.0=fully pressed, -1.0=fully depressed
 		# now = time.time()
-		if value > -0.9:
+		if value > -1:
 			p.input.moveUp = True
 			"""
 			if now - itemuseTimestamp > 1:
@@ -185,9 +223,17 @@ def gamepad_sticks(p,axis,value):
 			
 	elif axis == 5:
 		# R1 1.0=fully pressed, -1.0=fully depressed
-		if value > -0.9:
+		if value > -1:
+			"""
+			Not vibrating
+			Small vibrating
+			Large vibrating
+			Both vibrating
+			"""
+			
 			p.input.fire = True
 		else:
+			# joystick.stop_rumble()
 			p.input.fire = False
 
 
@@ -202,7 +248,7 @@ def process(player):
 	"""
 	# Add a small delay to control the print speed
 	# pygame.time.delay(10)
-	
+
 	for event in pygame.event.get():
 		# print(event)
 		if event.type == pygame.QUIT:

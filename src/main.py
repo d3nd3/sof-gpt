@@ -51,11 +51,11 @@ if __name__ == "__main__":
 	
 	# name and predicting overriden inside player.py
 	userinfo = {
-		"predicting"			: "1",
+		"predicting"			: "0",
 		"spectator_password" 	: "acadie",
 		"password"				: "acadie",
 		"cl_violence"			: "0",
-		"spectator"				: "1",
+		"spectator"				: "0",
 		"skin"					: "widowmaker",
 		"teamname"				: "Ministry of Sin",
 		"fov"					: "95",

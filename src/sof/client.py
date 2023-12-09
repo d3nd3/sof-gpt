@@ -44,8 +44,8 @@ class SofClient:
 
 		self.connectedCount = 0
 
-		self.FPS = 30 #change this
-		self.msec_sleep = math.ceil(1000/self.FPS) #255 max for byte object msec command.
+		self.FPS = 145 #change this
+		self.msec_sleep = math.floor(1000/self.FPS) #255 max for byte object msec command.
 		self.float_sleep = self.msec_sleep / 1000 #in secs
 		self.target_fps = round(1000/self.msec_sleep)
 

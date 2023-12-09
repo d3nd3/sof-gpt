@@ -9,6 +9,8 @@ import re
 
 import util
 
+from sof.keys import getJoystick
+
 class Parser:
 	"""
 		parse a null terminated string
@@ -436,8 +438,29 @@ def svc_frame(conn,player,view):
 	view=view[4:]
 	
 	#ParseStats
+	# STAT_HEALTH = 1
+	# STAT_ARMOUR = 5
 	for k in range(16):
 		if ( statbits & ( 1<<k) ):
+			if k == 1:
+				player.prev_health = player.health
+				player.health = struct.unpack_from('<h',view,0)[0]
+				dmg = player.prev_health - player.health
+				if dmg > 0 and player.prev_health > 0:
+					# print("LOSE HEALTH")
+					dmgRatio = dmg/100
+					j,low,high = getJoystick(low=0.6 + 0.4*dmgRatio)
+					if j:
+						j.rumble(low,high,round(100 + 400*dmgRatio))
+						getJoystick(high=0)
+			elif k == 5:
+				"""
+				player.prev_armor = player.armor
+				player.armor = struct.unpack_from('<h',view,0)[0]
+				if player.armor - player.prev_armor < 0 and player.prev_armor > 0:
+					# print("LOSE ARMOR")
+					getJoystick().rumble(1,0,100)
+				"""
 			view=view[2:]
 
 	if flags & PS_CINEMATICFREEZE:
