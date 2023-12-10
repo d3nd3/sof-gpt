@@ -180,7 +180,7 @@ def gamepad_sticks(p,axis,value):
 			p.input.moveLeft = True
 	# LOOK RIGHT/LEFT
 	elif axis == 3:
-		V = 0.1
+		V = 0.2
 		if value < V and value > -V:
 			p.input.lookLeft = False
 			p.input.lookRight = False

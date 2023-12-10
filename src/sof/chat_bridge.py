@@ -168,6 +168,14 @@ class GPT_COMMANDS:
 
 		p.roll_speed = int(data)
 		util.say(p,f"roll_speed is now {p.roll_speed}")
+
+	def speed_boost(p,data):
+		if not len(data):
+			util.say(p, f"speed_boost is {p.speed_boost}")
+			return
+
+		p.speed_boost = int(data)
+		util.say(p,f"speed_boost is now {p.speed_boost}")
 		
 	def skin(p, data):
 		if not len(data):
@@ -311,6 +319,8 @@ sof_chat_settings = {
 	"pitch_speed": (lambda p, data: GPT_COMMANDS.pitch_speed(p, data)),
 	"yaw_speed": (lambda p, data: GPT_COMMANDS.yaw_speed(p, data)),
 	"roll_speed": (lambda p, data: GPT_COMMANDS.roll_speed(p, data)),
+
+	"speed_boost": (lambda p, data: GPT_COMMANDS.speed_boost(p, data)),
 }
 
 def interact(msg,player):

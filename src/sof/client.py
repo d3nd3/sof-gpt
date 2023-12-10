@@ -45,9 +45,11 @@ class SofClient:
 		self.connectedCount = 0
 
 		self.FPS = 145 #change this
-		self.msec_sleep = math.floor(1000/self.FPS) #255 max for byte object msec command.
+		# rounded up in msec, to lower frame-rate bound.
+		self.msec_sleep = math.ceil(1000/self.FPS) #255 max for byte object msec command.
+		print(f"Calculated msec of {self.msec_sleep}")
 		self.float_sleep = self.msec_sleep / 1000 #in secs
-		self.target_fps = round(1000/self.msec_sleep)
+		self.target_fps = 1000/self.msec_sleep
 
 		self.framecount = 0
 		self.main_begin = self.before_cpu = time.time()
@@ -183,4 +185,5 @@ class SofClient:
 
 			self.before_cpu = time.time()
 			"""
-			clock.tick(self.target_fps)
+			# clock.tick(self.target_fps)
+			clock.tick_busy_loop(math.floor(self.target_fps))

@@ -111,15 +111,15 @@ class Player:
 		self.custom_yaw = 9999
 		self.custom_roll = 9999
 
-		self.pitch_speed = 250
-		self.yaw_speed = 2050
-		self.roll_speed = 250
+		self.pitch_speed = 400
+		self.yaw_speed = 1700
+		self.roll_speed = 400
 
 		self.delta_pitch = 0
 		self.delta_yaw = 0
 		self.delta_roll = 0
 
-		self.forward_speed = 100
+		self.speed_boost = 0
 
 		self.isRunning = True
 		if userinfo["predicting"] == "1":
@@ -179,10 +179,11 @@ class Player:
 		# this resets predicting which is a userinfo essentially.
 		# thus removed isPredicting and isRunning into player.
 		self.input = UserInput()
-		self.uc_oldest = UserCmd(self.main.msec_sleep if self.main.msec_sleep < 256 else 255)
-		self.uc_now = UserCmd(self.main.msec_sleep if self.main.msec_sleep < 256 else 255)
-		self.uc_old = UserCmd(self.main.msec_sleep if self.main.msec_sleep < 256 else 255)
-		self.uc_oldest = UserCmd(self.main.msec_sleep if self.main.msec_sleep < 256 else 255)
+		msec = self.main.msec_sleep+self.speed_boost if self.main.msec_sleep+self.speed_boost < 256 else 255
+		self.uc_oldest = UserCmd(msec)
+		self.uc_now = UserCmd(msec)
+		self.uc_old = UserCmd(msec)
+		self.uc_oldest = UserCmd(msec)
 
 		# depends on userinfo and sets userinfo
 		self.setPredicting(self.isPredicting)
@@ -303,7 +304,9 @@ class Player:
 		# pitch
 		cmd = self.uc_now
 		# start from 0
-		cmd.__init__(self.main.msec_sleep if self.main.msec_sleep < 256 else 255)
+		msec = self.main.msec_sleep+self.speed_boost if self.main.msec_sleep+self.speed_boost < 256 else 255
+		# print(msec)
+		cmd.__init__(msec)
 
 		if self.input.lookUp:
 			self.viewangles[0] -= int(round(self.pitch_speed*self.input.rightJoystickSensY* self.main.float_sleep)) 
