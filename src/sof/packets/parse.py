@@ -51,9 +51,8 @@ class Parser:
 					# print("SERVED BY PRECACHE STUFFTEXT\n")
 				elif a.find("reconnect",0) == 0:
 					print("They want you to reconnect by stufftext\n")
-					conn.connected = 0
-					conn.new()
-					# player.init = False
+					# player.initialize()
+					player.init = False
 
 					
 		return retlist
@@ -213,11 +212,21 @@ def svc_serverdata(conn,player,view):
 
 def svc_configstring(conn,player,view):
 	#print("PACKET: configstring\n")
+	normalindex = struct.unpack_from('<h',view,0)[0]
 	view=view[2:]
-	if view[0] == 0xFF and view[1] == 0xFF:
+	configcheat = struct.unpack_from('<h',view,0)[0]
+	view=view[2:]
+	if configcheat == -1:
+		# networkstring
 		s,view = Parser.string(view)
 	else:
-		view=view[2:]
+		# configcheat
+		# expects to read configstring from local cache. using configcheat as index.
+		# reduces network bandwidth, but still has high latency costs..
+		# q2 uses this for cs_models only, by prefix string with *
+		# sof is using it for all configstring types.
+		pass
+		
 
 	return view
 

@@ -111,9 +111,9 @@ class Player:
 		self.custom_yaw = 9999
 		self.custom_roll = 9999
 
-		self.pitch_speed = 400
+		self.pitch_speed = 500
 		self.yaw_speed = 1700
-		self.roll_speed = 400
+		self.roll_speed = 500
 
 		self.delta_pitch = 0
 		self.delta_yaw = 0
@@ -140,7 +140,9 @@ class Player:
 		# name should start out color-less.
 		userinfo["name"] = name + main.gpt["toggle_color_1"]
 		self.userinfo = userinfo
-		self.past_userinfo = self.userinfo.copy()
+		# self.past_userinfo = self.userinfo.copy()
+		self.past_userinfo = None
+
 
 		self.health = 100
 		self.armor = 0
@@ -151,6 +153,9 @@ class Player:
 
 	def initialize(self):
 		self.init = True
+
+		# force resend of userinfo
+		self.past_userinfo = None
 
 		self.reinit_usercmd()
 

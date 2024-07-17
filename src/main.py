@@ -56,14 +56,14 @@ if __name__ == "__main__":
 		"password"				: "acadie",
 		"cl_violence"			: "0",
 		"spectator"				: "0",
-		"skin"					: "widowmaker",
-		"teamname"				: "Ministry of Sin",
-		"fov"					: "95",
-		"msg"					: "0",
-		"rate"					: "25000",
+		"skin"					: "amu",
 		"allow_download_models" : "1",
+		"fov"					: "95",
 		"team_red_blue"			: "0",
-		"bestweap"				: "" #safe/unsafe
+		"teamname"				: "amu",
+		"rate"					: "25000",
+		"msg"					: "0",
+		#"bestweap"				: "safe" #safe/unsafe
 	}
 
 	

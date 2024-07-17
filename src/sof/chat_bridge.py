@@ -211,6 +211,13 @@ class GPT_COMMANDS:
 		p.userinfo["spectator"] = data
 		util.say(p,f"spectator is now {data}")
 
+	def team_red_blue(p,data):
+		if not len(data):
+			util.say(p, f"team_red_blue is {p.userinfo['team_red_blue']}")
+			return
+		p.userinfo["team_red_blue"] = data
+		util.say(p,f"team_red_blue is now {data}")
+
 	def cl_run(p, data):
 		if not len(data):
 			util.say(p, f"cl_run is {p.isPredicting}")
@@ -309,6 +316,7 @@ sof_chat_settings = {
 	"skin": (lambda p, data: GPT_COMMANDS.skin(p, data)),
 	"name": (lambda p, data: GPT_COMMANDS.name(p, data)),
 	"predicting": (lambda p, data: GPT_COMMANDS.predicting(p, data)),
+	"team_red_blue": (lambda p, data: GPT_COMMANDS.team_red_blue(p, data)),
 
 	"forward_speed": (lambda p, data: GPT_COMMANDS.forward_speed(p, data)),
 

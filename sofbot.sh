@@ -7,7 +7,7 @@
 #b corner ctf
 #xvfb-run python3 src/main.py 54.39.52.55 28910 sofgpt
 #bots corner
-python3 src/main.py 54.39.52.55 28920 sofgpt
+# xvfb-run python3 src/main.py 54.39.52.55 28920 sofgpt
 
 #acadie
 # python3 src/main.py 142.68.186.241 28950 heretic
@@ -16,7 +16,7 @@ python3 src/main.py 54.39.52.55 28920 sofgpt
 #xvfb-run python3 src/main.py 5.135.46.179 28910 blossom
 
 # linux
-#xvfb-run python3 src/main.py 37.187.74.171 28910 blossom
+xvfb-run python3 src/main.py 37.187.74.171 28910 blossom
 
 #KK
 #xvfb-run python3 src/main.py 143.177.190.112 28912 training
