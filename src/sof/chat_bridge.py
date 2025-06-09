@@ -108,6 +108,8 @@ class GPT_COMMANDS:
 		p.conn.append_string_to_reliable(f"{CLC_STRINGCMD}weaponselect {weaponID}\x00")
 	# SETTINGS
 	# -----------------------------------------------------------------------
+
+	# Chat-Gpt parsing settings
 	def base_delay(p, data):
 		if not len(data):
 			util.say(p, f"base_delay is {p.main.gpt['base_delay']}")
@@ -309,6 +311,8 @@ sof_chat_commands = {
 
 sof_chat_settings = {
 	# settings
+
+	# chat-gpt output settings
 	"base_delay": (lambda p, data: GPT_COMMANDS.base_delay(p, data)),
 	"scaled_delay": (lambda p, data: GPT_COMMANDS.scaled_delay(p, data)),
 

@@ -26,7 +26,7 @@ import time
 def contact(question,keep_alive_func=None):
 	# Start a webdriver instance and open ChatGPT
 	options = webdriver.ChromeOptions()
-	options.add_argument("--user-data-dir=/home/dindu/.config/chromium")
+	options.add_argument("--user-data-dir=/home/dinda/.config/sof-gpt-chromium")
 	# options.add_argument("--headless")
 	
 	# driver = webdriver.Chrome(chromium_driver,options=options)
@@ -48,7 +48,7 @@ def contact(question,keep_alive_func=None):
 	before = time.time()
 	while True:
 		try:
-			input_field = driver.find_element(By.CSS_SELECTOR,"textarea[data-id='root']")
+			input_field = driver.find_element(By.CSS_SELECTOR,".ProseMirror")
 			# code here = found
 			break
 		# NoSuchElementException

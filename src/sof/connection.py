@@ -3,6 +3,7 @@ import socket
 import time
 import struct
 import errno
+import sys
 
 from sof.packets.parse import Parser,packet_parsers
 from sof.packets.types import *
@@ -28,7 +29,6 @@ class Endpoint:
 		# Remove self from endpoint
 		self.players.remove(player)
 
-		# Player is forgotten about now?
 
 # this class represents the network code required to talk to server
 # unique for each player , unique socket handle.
@@ -148,7 +148,7 @@ class Connection:
 
 
 	def append_string_to_reliable(self,what):
-		self.future_rel_data += what.encode('latin_1')
+		self.future_rel_data += what.encode('latin_1', errors='ignore')
 
 	def append_to_reliable(self,what):
 		self.future_rel_data += what

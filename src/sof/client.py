@@ -13,14 +13,14 @@ import util
 import time
 import pygame
 
-import sys
+import os
 import math
 import threading
 from queue import Queue
 
 
 # this class represents the entire tool.
-# ideally handles multiple connections
+# ideally handles multiple connections/endpoints/servers
 # and ideally there can be multiple players to a connection
 
 # I refer to this as `main`
@@ -79,6 +79,10 @@ class SofClient:
 		# Player doesnt renew, but Connection does.
 		# Store wasConnected in player
 		for ep_key,e in self.endpoints.items():
+			if not len(e.players):
+				# Not working.
+				pygame.quit()
+				os._exit(0)
 			# using list() so that we can remove from it easier.
 			for player in list(e.players):
 				if not player.init:
@@ -88,9 +92,6 @@ class SofClient:
 						print("REMOVING! server not respond!")
 						e.players.remove(player)
 						continue
-				if not len(e.players):
-					print("Exiting: no more valid players exist.")
-					sys.exit(1)
 
 				c = player.conn
 

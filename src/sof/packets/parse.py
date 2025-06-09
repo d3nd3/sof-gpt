@@ -53,6 +53,9 @@ class Parser:
 					print("They want you to reconnect by stufftext\n")
 					# player.initialize()
 					player.init = False
+				elif a.find("team_red_blue ",0) == 0:
+					# print(f"Set team_red_blue to {a.split()[1]}")
+					player.userinfo["team_red_blue"] = a.split()[1] 
 
 					
 		return retlist
@@ -157,7 +160,6 @@ def svc_stufftext(conn,player,view):
 	cmd_stufftexts=Parser.stufftext(s,conn,player)
 
 	for a in cmd_stufftexts:
-		
 		if a.find("configstrings ",0) == 0:
 			conn.append_string_to_reliable("\x04"+a+"\x00")
 		elif a.find("begin",0) == 0:
