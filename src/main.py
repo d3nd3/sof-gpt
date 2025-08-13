@@ -1,4 +1,5 @@
 from sof.client import SofClient
+from sof.server_list import select_server
 
 import sys
 import time
@@ -37,9 +38,27 @@ if __name__ == "__main__":
 
 	# util.print_bits(b"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
 	# sys.exit(1)
-	ip = sys.argv[1]
-	port = sys.argv[2]
-	name = sys.argv[3]
+
+	# Usage:
+	#   python -m src.main <ip> <port> <name>
+	# If not provided, show interactive server selector
+	if len(sys.argv) >= 4:
+		ip = sys.argv[1]
+		port = sys.argv[2]
+		name = sys.argv[3]
+	else:
+		selection = select_server()
+		if not selection:
+			print("No server selected. Exiting.")
+			sys.exit(0)
+		ip, port_int = selection
+		port = str(port_int)
+		# Ask for a player name, default to 'sof-gpt'
+		try:
+			entered = input("Enter player name [sof-gpt]: ").strip()
+			name = entered if len(entered) else "sof-gpt"
+		except EOFError:
+			name = "sof-gpt"
 	print(f"ip : {ip}\nport : {port}\nname : {name}")
 
 	client = SofClient()
