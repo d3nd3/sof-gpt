@@ -227,7 +227,36 @@ class SofClient:
 			GPT.GPT_COMMANDS.shoot180(player, "")
 			return
 		if low == "/help":
-			print("Commands: /gpt <text>, /say <text>, /reconnect, /quit, /weapon <id>, /name <n>, /skin <s>, /speed_boost <n>, /shoot180")
+			print("Available commands:")
+			print("  /help                         - Show this help")
+			print("  /gpt <text>                   - Ask GPT; same as @sofgpt <text>")
+			print("  /say <text>                   - Send a chat line in-game")
+			print("  /reconnect                    - Reconnect to the server")
+			print("  /quit                         - Leave the server")
+			print("  /weapon <id>                  - Select weapon by id")
+			print("  /name <n>                     - Set player name")
+			print("  /skin <s>                     - Set player skin")
+			print("  /speed_boost <n>              - Adjust movement tick msec boost")
+			print("  /shoot180                     - Quick 180 turn and fire")
+			print("  /fps                          - Show current target fps")
+			print("  /fps <n>                      - Set target fps (updates tick rate)")
+			return
+		if low == "/fps":
+			print(f"Current target fps: {self.target_fps:.2f} (msec {self.msec_sleep})")
+			return
+		if low.startswith("/fps "):
+			try:
+				new_fps = float(line.split(None,1)[1])
+				if new_fps <= 0:
+					print("FPS must be > 0")
+					return
+				self.FPS = new_fps
+				self.msec_sleep = math.ceil(1000/self.FPS)
+				self.float_sleep = self.msec_sleep / 1000
+				self.target_fps = 1000/self.msec_sleep
+				print(f"FPS updated: target_fps={self.target_fps:.2f}, msec={self.msec_sleep}")
+			except Exception:
+				print("Usage: /fps <number>")
 			return
 		# default: treat as GPT content
 		GPT.interact(line, player)
@@ -245,7 +274,7 @@ class SofClient:
 		self.chat_ui.start()
 
 		# Start a separate thread for terminal commands
-		input_thread = threading.Thread(target=self.process_user_input)
+		input_thread = threading.Thread(target=self.process_user_input, name="TerminalInputThread")
 		input_thread.daemon = True
 		input_thread.start()
 

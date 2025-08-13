@@ -13,6 +13,7 @@ class ChatUI:
         self._root: Optional[tk.Tk] = None
         self._text: Optional[scrolledtext.ScrolledText] = None
         self._entry: Optional[tk.Entry] = None
+        self._visible: bool = True
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
@@ -43,11 +44,32 @@ class ChatUI:
         send_btn = tk.Button(frame, text="Send", command=self._send_clicked)
         send_btn.pack(side=tk.LEFT, padx=(6, 0))
 
+        # Intercept window close to hide instead of destroy (avoid crashes on some platforms)
+        self._root.protocol("WM_DELETE_WINDOW", self._on_close)
+
         self._pump_incoming()
         try:
             self._root.mainloop()
         except Exception:
             pass
+
+    def show(self) -> None:
+        if self._root:
+            try:
+                self._root.deiconify()
+                self._visible = True
+                if self._entry:
+                    self._entry.focus_set()
+            except Exception:
+                pass
+
+    def hide(self) -> None:
+        if self._root:
+            try:
+                self._root.withdraw()
+                self._visible = False
+            except Exception:
+                pass
 
     def _append_text(self, message: str) -> None:
         if not self._text:
@@ -88,3 +110,7 @@ class ChatUI:
         except Exception:
             # Avoid crashing UI thread on send errors
             pass
+
+    def _on_close(self):
+        # Hide window instead of destroying to avoid segfaults due to thread-event loop teardown
+        self.hide()
