@@ -128,6 +128,11 @@ def svc_nameprint(conn,player,view):
 	input_str = s.tobytes().decode('latin_1')
 
 	print(f"client {data1} says : {input_str}")
+	# Forward to GUI
+	try:
+		player.main.on_game_chat(input_str.strip())
+	except Exception:
+		pass
 
 	# define the regular expression pattern
 	pattern = r"^\[.+\]\s(.*)\n"
@@ -462,7 +467,7 @@ def svc_frame(conn,player,view):
 					dmgRatio = dmg/100
 					j,low,high = getJoystick(low=0.6 + 0.4*dmgRatio)
 					if j:
-						j.rumble(low,high,round(100 + 400*dmgRatio))
+						# j.rumble(low,high,round(100 + 400*dmgRatio))
 						getJoystick(high=0)
 			elif k == 5:
 				"""

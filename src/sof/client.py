@@ -2,6 +2,7 @@ from sof.player import Player
 from sof.connection import Endpoint
 
 from sof.chat_bridge import output_gpt
+import sof.chat_bridge as GPT
 
 from sof.packets.defines import *
 
@@ -9,6 +10,7 @@ import sof.packets.types as types
 
 import sof.keys
 import util
+from ui.chat_gui import ChatUI
 
 import time
 import pygame
@@ -56,6 +58,11 @@ class SofClient:
 
 		# thread safe queue
 		self.user_input_queue = Queue()
+		# GUI chat input queue
+		self.gui_chat_queue = Queue()
+
+		# GUI chat window
+		self.chat_ui = ChatUI(self._on_gui_send)
 
 		
 	# if connection already exists, append a player, else both
@@ -103,12 +110,33 @@ class SofClient:
 						print(f"DISCONNECTED: New Total : {self.connectedCount}")
 
 				c.recv()
+				
 				# TODO: THERE IS BUG ON SOME MAPS THAT START PACKET WITH SVC_TMP_ENTITY
 				
 				sof.keys.process(player)
 
 				# send usercmds if connected
 				player.moveAndSend()
+
+				if hasattr(player, 'step2') and player.step2 is not None:
+					if time.monotonic() >= player.step2:
+						player.step2 = None # Clear the timer
+						player.input.fire = False
+						
+						
+						player.viewangles[1] = player.viewangles[1] + 2048
+						if player.viewangles[1] > 2047:
+							player.viewangles[1] -= 4096
+							
+				if hasattr(player, 'step1') and player.step1 is not None:
+					if time.monotonic() >= player.step1:
+						player.step1 = None # Clear the timer
+						player.input.fire = True
+						player.step2 = time.monotonic() + 0.008
+						
+						
+						
+				
 
 				pygame.display.update()
 				
@@ -135,13 +163,74 @@ class SofClient:
 					# its timer restricted. so it doesnt spam
 					output_gpt(self,player,player.conn)
 
-					# Check if there's user input in the queue
-					if not self.user_input_queue.empty():
-						user_input = self.user_input_queue.get()
-						# Now you can use the user_input in the main thread
-						# util.pretty_dump(util.str_to_byte(user_input))
-						c.append_string_to_reliable(f"{types.CLC_STRINGCMD}{user_input}\x00")
+					# Drain terminal command queue
+					while not self.user_input_queue.empty():
+						cmd_line = self.user_input_queue.get()
+						self._execute_terminal_command(player, cmd_line)
+
+					# Drain GUI chat queue
+					while not self.gui_chat_queue.empty():
+						text = self.gui_chat_queue.get()
+						player.conn.append_string_to_reliable(f"{types.CLC_STRINGCMD}say {text}\x00")
 				break
+
+	def _on_gui_send(self, text: str):
+		self.gui_chat_queue.put(text)
+
+	def on_game_chat(self, message: str):
+		# Called from packet parser to display chat in GUI
+		try:
+			self.chat_ui.post(message)
+		except Exception:
+			pass
+
+	def _get_primary_player(self):
+		for _, endpoint in self.endpoints.items():
+			for player in endpoint.players:
+				return player
+		return None
+
+	def _execute_terminal_command(self, player, line: str):
+		line = line.strip()
+		if not line:
+			return
+		# sofgpt invocation
+		for prefix in ("@sofgpt ", "/gpt ", "gpt "):
+			if line.lower().startswith(prefix):
+				content = line[len(prefix):]
+				GPT.interact(content, player)
+				return
+		# built-ins
+		low = line.lower()
+		if low.startswith("/say "):
+			player.conn.append_string_to_reliable(f"{types.CLC_STRINGCMD}say {line[5:]}\x00")
+			return
+		if low == "/reconnect":
+			GPT.GPT_COMMANDS.reconnect(player, "")
+			return
+		if low == "/quit":
+			GPT.GPT_COMMANDS.quit(player, "")
+			return
+		if low.startswith("/weapon "):
+			GPT.GPT_COMMANDS.weaponselect(player, low.split(None,1)[1])
+			return
+		if low.startswith("/name "):
+			GPT.GPT_COMMANDS.name(player, line.split(None,1)[1])
+			return
+		if low.startswith("/skin "):
+			GPT.GPT_COMMANDS.skin(player, line.split(None,1)[1])
+			return
+		if low.startswith("/speed_boost "):
+			GPT.GPT_COMMANDS.speed_boost(player, line.split(None,1)[1])
+			return
+		if low == "/shoot180":
+			GPT.GPT_COMMANDS.shoot180(player, "")
+			return
+		if low == "/help":
+			print("Commands: /gpt <text>, /say <text>, /reconnect, /quit, /weapon <id>, /name <n>, /skin <s>, /speed_boost <n>, /shoot180")
+			return
+		# default: treat as GPT content
+		GPT.interact(line, player)
 				
 	def process_user_input(self):
 		# Implement your logic for processing user input here
@@ -152,7 +241,10 @@ class SofClient:
 	def beginLoop(self,clock):
 		print("Starting sof-gpt...")
 
-		# Start a separate thread for user input
+		# Start GUI chat window
+		self.chat_ui.start()
+
+		# Start a separate thread for terminal commands
 		input_thread = threading.Thread(target=self.process_user_input)
 		input_thread.daemon = True
 		input_thread.start()
