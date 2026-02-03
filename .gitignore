@@ -1,3 +1,4 @@
 *.pyc
 /sofbot.sh
 /sofbot_local.sh
+/sof-gpt_env/

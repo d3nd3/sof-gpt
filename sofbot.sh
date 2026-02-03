@@ -16,7 +16,7 @@
 #xvfb-run python3 src/main.py 5.135.46.179 28910 blossom
 
 # linux
-xvfb-run python3 src/main.py 37.187.74.171 28910 blossom
+python3 src/main.py 51.89.195.188 28916 blossom
 
 #KK
 #xvfb-run python3 src/main.py 143.177.190.112 28912 training

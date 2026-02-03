@@ -283,9 +283,19 @@ class Connection:
 
 			s=struct.unpack_from('<i',view,0)
 			if s[0] == -1:
-				# connectionless packet ?
-				# print("[UNCONNECTED PACKET RECEIVED]: ",bytes(view),"\n")
-				util.multiline_print(view)
+				# connectionless packet (e.g., RCON responses)
+				try:
+					payload = view[4:].tobytes()
+					text = payload.decode('latin_1', errors='ignore')
+					# Typical begins with 'print' followed by message
+					if text.startswith('print'):
+						msg = text[5:].lstrip('\n\r ')
+					else:
+						msg = text
+					# forward to RCON UI/output channel
+					self.player.main.on_rcon_output(msg)
+				except Exception:
+					pass
 				return view[4:]
 			else:
 				# print("[CONNECTED PACKET RECEIVED]: ",bytes(view),"\n")

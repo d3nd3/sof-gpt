@@ -1,6 +1,7 @@
 import sof.chat_bridge as GPT
 
 from sof.packets.defines import *
+from .strip import _process_sp_print_data
 
 import struct
 import time
@@ -96,67 +97,6 @@ def svc_reconnect(conn,player,view):
 def svc_sound(conn,player,view):
 	return None
 
-def svc_print(conn,player,view):
-	view=view[1:]
-	s,view = Parser.string(view)
-	s = util.mem_to_str(s)
-	if s == "Server restarted\n":
-		print("Server restart detected via print\n");
-		player.init = False
-		return view
-
-	if "sof1.org/viewtopic.php?t=4660" not in s:
-		print("PACKET: print\n",s)
-
-	return view
-
-
-def svc_nameprint(conn,player,view):
-	# 1st byte = client id 2nd byte = teamsay
-	data1 = struct.unpack_from('<B',view,0)[0]
-	view=view[1:]
-	try:
-		data2 = struct.unpack_from('<B',view,0)[0]
-		view=view[1:]
-	except:
-		# this only happens when > 32 clients in server
-		print("----------WEIRD DATA RECEIVED-------------")
-		return
-	
-
-	s,view = Parser.string(view)
-	input_str = s.tobytes().decode('latin_1')
-
-	print(f"client {data1} says : {input_str}")
-	# Forward to GUI
-	try:
-		player.main.on_game_chat(input_str.strip())
-	except Exception:
-		pass
-
-	# define the regular expression pattern
-	pattern = r"^\[.+\]\s(.*)\n"
-
-	# util.pretty_dump(input_str.encode(('latin_1')))
-
-	# test input string
-	# input_str = "nameHere : [1 m] some content"
-
-	content = input_str
-	# test for pattern
-	match = re.search(pattern, input_str)
-	if match:
-		content = match.group(1)
-		
-	# print(f"Content: {content}")
-	
-	content = content.strip()
-	if content.find("@sofgpt ") == 0:
-		content = content[8:]
-		GPT.interact(content,player)
-	
-	return view
-
 def svc_stufftext(conn,player,view):
 	s,view = Parser.string(view)
 	# print(f"{s.tobytes()}")
@@ -226,6 +166,27 @@ def svc_configstring(conn,player,view):
 	if configcheat == -1:
 		# networkstring
 		s,view = Parser.string(view)
+		# Debug removed (was printing every configstring)
+		# Store raw configstring for later lookup
+		try:
+			player.main.configstrings[normalindex] = s.tobytes().decode('latin_1')
+		except Exception:
+			pass
+		# Attempt to capture playerinfo from playerskins range.
+		# In SoF, playerskins block is contiguous of size MAX_CLIENTS starting at CS_PLAYERSKINS.
+		if normalindex >= CS_PLAYERSKINS and normalindex < CS_PLAYERSKINS + CS_MAXCLIENTS:
+			try:
+				info = s.tobytes().decode('latin_1')
+				parts = info.split('\\')
+				if len(parts) >= 1 and parts[0]:
+					name = parts[0]
+					# Slot id is offset within the playerskins block
+					slot_guess = normalindex - CS_PLAYERSKINS
+					player.main.set_slot_name(slot_guess, name)
+					player.main.register_playerskin(normalindex, name)
+					# print(f"[playerskins] idx={normalindex} slot={slot_guess} name={name}")
+			except Exception:
+				pass
 	else:
 		# configcheat
 		# expects to read configstring from local cache. using configcheat as index.
@@ -322,13 +283,6 @@ def svc_spawnbaseline(conn,player,view):
 
 		return parsed_message
 
-	
-
-def svc_centerprint(conn,player,view):
-	return None
-
-def svc_captionprint(conn,player,view):
-	return None
 
 def svc_download(conn,player,view):
 	#print("PACKET: download\n")
@@ -467,7 +421,9 @@ def svc_frame(conn,player,view):
 					dmgRatio = dmg/100
 					j,low,high = getJoystick(low=0.6 + 0.4*dmgRatio)
 					if j:
-						# j.rumble(low,high,round(100 + 400*dmgRatio))
+						# Use the new rumble system
+						import sof.keys
+						sof.keys.start_rumble(low, high, round(100 + 400*dmgRatio))
 						getJoystick(high=0)
 			elif k == 5:
 				"""
@@ -475,7 +431,8 @@ def svc_frame(conn,player,view):
 				player.armor = struct.unpack_from('<h',view,0)[0]
 				if player.armor - player.prev_armor < 0 and player.prev_armor > 0:
 					# print("LOSE ARMOR")
-					getJoystick().rumble(1,0,100)
+					import sof.keys
+					sof.keys.start_rumble(1.0, 0.0, 100)
 				"""
 			view=view[2:]
 
@@ -621,14 +578,137 @@ def svc_restart_predn(conn,player,view):
 def svc_rebuild_pred_inv(conn,player,view):
 	return None
 
-def svc_countdown(conn,player,view):
-	return None
-
-def svc_cinprint(conn,player,view):
+def svc_centerprint(conn,player,view):
+	print(f"PACKET: centerprint\n{view}")
 	return None
 
 def svc_playernamecols(conn,player,view):
 	return None
+
+#===PRINT PACKETS===
+
+#This server is available. Type .gamepark claim <username> <password> to claim
+#(stufftext) Client [0]: sp_sv_client_swap
+def svc_print(conn,player,view):
+	view=view[1:]
+	s,view = Parser.string(view)
+	s = util.mem_to_str(s)
+	if s == "Server restarted\n":
+		print("Server restart detected via print\n");
+		player.init = False
+		return view
+
+	# print(f"PACKET: print\n{s}")
+	player.main.chat_ui.post(f"[PRINT] {s}")
+	return view
+
+
+def svc_nameprint(conn,player,view):
+	# 1st byte = client id 2nd byte = teamsay
+	data1 = struct.unpack_from('<B',view,0)[0]
+	view=view[1:]
+	try:
+		data2 = struct.unpack_from('<B',view,0)[0]
+		view=view[1:]
+	except:
+		# this only happens when > 32 clients in server
+		print("----------WEIRD DATA RECEIVED-------------")
+		return
+	
+
+	s,view = Parser.string(view)
+	input_str = s.tobytes().decode('latin_1')
+
+	print(f"client {data1} says : {input_str}")
+
+	# Extract speaker name and clean content
+	msg_line = input_str.strip()
+	# Strip bracketed slot prefix like "[0] " from the content
+	content_only = msg_line
+	br = re.match(r"^\[(\d+)\]\s*(.*)$", msg_line)
+	if br:
+		content_only = br.group(2)
+
+	# 1) Prefer configstrings: playerskins is at CS_PLAYERSKINS + slot; debug heavily
+	pretty = None
+	try:
+		ci_idx = CS_PLAYERSKINS + data1
+		ci = player.main.configstrings.get(ci_idx)
+		# verbose debug removed after fix; uncomment if needed
+		# print(f"[nameprint] slot={data1} try ci_idx={ci_idx} ci={'present' if ci else 'none'}")
+		if ci:
+			parts = ci.split('\\')
+			# print(f"[nameprint] ci_parts={parts}")
+			if len(parts) >= 1 and parts[0]:
+				name = parts[0]
+				player.main.set_slot_name(data1, name)
+				pretty = f"[{data1}] {name}: {content_only}"
+	except Exception as e:
+		print(f"[nameprint] cs lookup error: {e}")
+
+	# 2) If not found, fallback: parse "name: message" format
+	if pretty is None and ":" in msg_line:
+		name_part, rest = msg_line.split(":", 1)
+		name_part = name_part.strip()
+		content = rest.strip()
+		pretty = f"[{data1}] {name_part}: {content}"
+		try:
+			player.main.set_slot_name(data1, name_part)
+		except Exception:
+			pass
+
+	# 3) If still no name, lookup previously known mapping
+	if pretty is None:
+		mapped = player.main.get_slot_name(data1)
+		if mapped:
+			pretty = f"[{data1}] {mapped}: {content_only}"
+		else:
+			pretty = f"[{data1}]: {content_only}"
+
+	# Forward to GUI
+	try:
+		player.main.on_game_chat(pretty, True)
+	except Exception:
+		pass
+
+	# define the regular expression pattern
+	pattern = r"^\[.+\]\s(.*)\n"
+
+	# util.pretty_dump(input_str.encode(('latin_1')))
+
+	# test input string
+	# input_str = "nameHere : [1 m] some content"
+
+	content = content_only
+	# test for pattern
+	match = re.search(pattern, input_str)
+	if match:
+		content = match.group(1)
+		
+	# print(f"Content: {content}")
+	
+	content = content.strip()
+	if content.find("@sofgpt ") == 0:
+		content = content[8:]
+		GPT.interact(content,player)
+	
+	return view
+
+def svc_captionprint(conn,player,view):
+	print(f"PACKET: captionprint\n{view}")
+	return None
+
+def svc_countdown(conn,player,view):
+	print(f"PACKET: countdown\n{view}")
+	return None
+
+def svc_cinprint(conn,player,view):
+	print(f"PACKET: cinprint\n{view}")
+	return None
+
+
+
+# For any print to client that reads string from .sp files without args
 # [short] string index [color]
 def svc_sp_print(conn,player,view):
 	
@@ -642,7 +722,9 @@ def svc_sp_print(conn,player,view):
 	# view=view[1:]
 
 	# s,view = Parser.string(view)
-	print(f"PACKET: sp_print : Index:{stringPackageIndex} Id:{stringPackageId}")
+
+	_process_sp_print_data(stringPackageId, stringPackageIndex, None, None, player)
+	# print(f"PACKET: sp_print : Index:{stringPackageIndex} Id:{stringPackageId}")
 	return view
 
 def svc_removeconfigstring(conn,player,view):
@@ -652,6 +734,7 @@ def svc_removeconfigstring(conn,player,view):
 # [byte] count of data bytes 
 # [data bytes] 
 # [color] at end of bytes
+# Used for many things. when the string is less than 256 bytes
 def svc_sp_print_data_1(conn,player,view):
 
 	stringPackageIndex = view[0]
@@ -671,32 +754,21 @@ def svc_sp_print_data_1(conn,player,view):
 	# color = view[0]
 	# view=view[1:]
 
-	if stringPackageId == 0: #GENERAL
-		if stringPackageIndex == 61:
-			print(f"[GENERAL] {util.mem_to_str(data)} entered the game.")
-	if stringPackageId == 17: #SOFPLUS
-		if stringPackageIndex == 0:
-			# slot == data[:4]
-			print(f"[SOFPLUS] Incoming player [{struct.unpack_from('<i',data,0)[0]}]: {util.mem_to_str(data[4:-1])}")
-		if stringPackageIndex == 21:
-			s,_ = Parser.string(data)
-			ss,_ = Parser.string(_)
-			print(f"[SOFPLUS] Timelimit={util.mem_to_str(s)} Remaining={util.mem_to_str(ss)}")
-	elif stringPackageId == 12: #BOT
-		if stringPackageIndex == 4:
-			print(f"[BOTS] {util.mem_to_str(data[4:-1])} disconnected.")
-	elif stringPackageId == 18: #CUSTOM
-		if stringPackageIndex == 12 or stringPackageIndex == 13 : #highscores
-			print(f"[CUSTOM] {util.mem_to_str(data)}")
+	# Call common processing function
+	_process_sp_print_data(stringPackageId, stringPackageIndex, data, dataBytes, player)
 
-	print(f"PACKET: sp_print_data_1 : Id:{stringPackageId} Index:{stringPackageIndex} DataBytes:{dataBytes} Data:{data.tobytes()}")
+	# print(f"PACKET: sp_print_data_1 : Id:{stringPackageId} Index:{stringPackageIndex} DataBytes:{dataBytes} Data:{data.tobytes()}")
 	return view
+
+
 # [short] string index 
 # [short] count of data bytes 
 # [data bytes] 
 # [color] at end of bytes
+# same as svc_sp_print_data_1 but for strings > 256 bytes
 def svc_sp_print_data_2(conn,player,view):
-
+	#Used by sofplus highscores print eg.
+	#Theory = flags SP_FLAG_ALWAYS_PRINT causes this route? 
 	stringPackageIndex = view[0]
 	view=view[1:]
 
@@ -713,8 +785,10 @@ def svc_sp_print_data_2(conn,player,view):
 	# color = view[0]
 	# view=view[1:]
 
-	
-	print(f"PACKET: sp_print_data_2 : Id:{stringPackageId} Index:{stringPackageIndex} DataBytes:{dataBytes} Data:{data.tobytes()}")
+	# Call common processing function
+	_process_sp_print_data(stringPackageId, stringPackageIndex, data, dataBytes, player)
+
+	# print(f"PACKET: sp_print_data_2 : Id:{stringPackageId} Index:{stringPackageIndex} DataBytes:{dataBytes} Data:{data.tobytes()}")
 
 	return view
 
@@ -724,6 +798,7 @@ def svc_welcomeprint(conn,player,view):
 	print("PACKET: welcomeprint\n",s)
 	return view
 
+# player kills
 def svc_sp_print_obit(conn,player,view):
 	return None
 

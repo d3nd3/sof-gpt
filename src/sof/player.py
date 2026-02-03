@@ -89,6 +89,7 @@ class UserInput:
 		self.use = False
 
 
+
 # This now represents everything
 # The Connection is only related because of having hostname/port
 class Player:
@@ -111,8 +112,8 @@ class Player:
 		self.custom_yaw = 9999
 		self.custom_roll = 9999
 
-		self.pitch_speed = 500
-		self.yaw_speed = 1700
+		self.pitch_speed = 350
+		self.yaw_speed = 1500
 		self.roll_speed = 500
 
 		self.delta_pitch = 0
@@ -215,7 +216,7 @@ class Player:
 	def onEnterServer(self):
 		self.timestamp_connected = time.time()
 		# conn.send(True,(f"\x04say Hi interact with me using @sofgpt\x00").encode('ISO 8859-1'))
-		self.conn.append_string_to_reliable(f"{types.CLC_STRINGCMD}say Hi!\x00")
+		# self.conn.append_string_to_reliable(f"{types.CLC_STRINGCMD}say Hi!\x00")
 
 	# you can append a bytes object to a bytesarray with += , str.encode() returns bytes.
 
@@ -242,7 +243,7 @@ class Player:
 		# update userinfo if needed
 		if self.userinfo != self.past_userinfo:
 			ui = self.make_userinfo()
-			print(f"Updating userinfo!\nshow\n{ui}")
+			# print(f"Updating userinfo!\nshow\n{ui}")
 			self.conn.append_string_to_reliable(f"{types.CLC_USERINFO}{ui}\x00")
 
 			self.past_userinfo = self.userinfo.copy()
@@ -406,7 +407,9 @@ class Player:
 			cmd.buttonsPressed |= BUTTON_ATTACK
 			j,low,high = getJoystick(high=0.7)
 			if j:
-				j.rumble(low, high, 20)
+				# Use the new rumble system
+				import sof.keys
+				sof.keys.start_rumble(low, high, 20)
 				getJoystick(low=0)
 			self.internal_allowed_to_fire_basic = False
 		else:

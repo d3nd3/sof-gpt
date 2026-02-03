@@ -53,13 +53,20 @@ if __name__ == "__main__":
 			sys.exit(0)
 		ip, port_int = selection
 		port = str(port_int)
-		# Ask for a player name, default to 'sof-gpt'
-		try:
-			entered = input("Enter player name [sof-gpt]: ").strip()
-			name = entered if len(entered) else "sof-gpt"
-		except EOFError:
-			name = "sof-gpt"
-	print(f"ip : {ip}\nport : {port}\nname : {name}")
+			# Ask for a player name, default to 'sof-gpt'
+	try:
+		entered = input("Enter player name [sof-gpt]: ").strip()
+		name = entered if len(entered) else "sof-gpt"
+	except EOFError:
+		name = "sof-gpt"
+	
+	# Ask for number of clients to load, default to 1
+	try:
+		clients_input = input("Enter number of clients to load [1]: ").strip()
+		num_clients = int(clients_input) if len(clients_input) else 1
+	except (EOFError, ValueError):
+		num_clients = 1
+	print(f"ip : {ip}\nport : {port}\nname : {name}\nclients : {num_clients}")
 
 	client = SofClient()
 
@@ -77,11 +84,11 @@ if __name__ == "__main__":
 		"password"				: "acadie",
 		"cl_violence"			: "0",
 		"spectator"				: "0",
-		"skin"					: "amu",
+		"skin"					: "widowmaker",
 		"allow_download_models" : "1",
 		"fov"					: "95",
-		"team_red_blue"			: "0",
-		"teamname"				: "amu",
+		"team_red_blue"			: "1",
+		"teamname"				: "Capture, Inc",
 		"rate"					: "25000",
 		"msg"					: "0",
 		#"bestweap"				: "safe" #safe/unsafe
@@ -97,8 +104,8 @@ if __name__ == "__main__":
 
 	# 16+ player unconnectable client struggles.
 	# 13 clients = message over flow. ( 2 + 11)
-	for i in range(0,1):
-		print(i,"clients")
+	for i in range(0, num_clients):
+		print(f"Creating client {i+1}/{num_clients}")
 		client.addPlayerToEndpoint(endpoint,userinfo,name)
 	
 	# endpoint = client.addEndpoint("5.135.46.179","28926")

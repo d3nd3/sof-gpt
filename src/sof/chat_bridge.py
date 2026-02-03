@@ -4,6 +4,7 @@ from functools import partial
 
 from sof.packets.defines import *
 from sof.packets.types import *
+from sof.commands import commands
 
 import util
 import time
@@ -104,235 +105,193 @@ class GPT_COMMANDS:
 		p.input.use = False
 
 	def weaponselect(p, data):
-		weaponID = int(data)
-		p.conn.append_string_to_reliable(f"{CLC_STRINGCMD}weaponselect {weaponID}\x00")
+		commands.weaponselect(p, data)
 	# SETTINGS
 	# -----------------------------------------------------------------------
 
 	# Chat-Gpt parsing settings
 	def base_delay(p, data):
-		if not len(data):
-			util.say(p, f"base_delay is {p.main.gpt['base_delay']}")
-			return
-		delay = int(data)
-		if delay >= 0 and delay <= 100:
-			p.main.gpt["base_delay"] = delay
-			util.say(p,f"base_delay is now {delay}")
+		commands.base_delay(p, data)
 
 	def scaled_delay(p, data):
-		if not len(data):
-			util.say(p, f"scaled_delay is {p.main.gpt['scaled_delay']}")
-			return
-		delay = int(data)
-		if delay >= 0 and delay <= 100:
-			p.main.gpt["scaled_delay"] = delay
-			util.say(p,f"scaled_delay is now {delay}")
+		commands.scaled_delay(p, data)
 
 	def forward_speed(p, data):
-		if not len(data):
-			util.say(p, f"forward_speed is {p.uc_now.forwardSpeed}")
-			return
-		update = int(data)
-		p.uc_now.forwardSpeed = update
-		util.say(p,f"forward_speed is now {update}")
+		commands.forward_speed(p, data)
 
 	def custom_pitch(p,data):
-		p.custom_pitch = int(data)
-		util.say(p,f"custom_pitch is now {p.custom_pitch}")
+		commands.custom_pitch(p, data)
 
 	def custom_yaw(p,data):
-		p.custom_yaw = int(data)
-		util.say(p,f"custom_yaw is now {p.custom_yaw}")
+		commands.custom_yaw(p, data)
 
 	def custom_roll(p,data):
-		p.custom_roll = int(data)
-		util.say(p,f"custom_roll is now {p.custom_roll}")
+		commands.custom_roll(p, data)
 
 	def pitch_speed(p,data):
-		if not len(data):
-			util.say(p, f"pitch_speed is {p.pitch_speed}")
-			return
-
-		p.pitch_speed = int(data)
-		util.say(p,f"pitch_speed is now {p.pitch_speed}")
+		commands.pitch_speed(p, data)
 
 	def yaw_speed(p,data):
-		if not len(data):
-			util.say(p, f"yaw_speed is {p.yaw_speed}")
-			return
-		p.yaw_speed = int(data)
-		util.say(p,f"yaw_speed is now {p.yaw_speed}")
+		commands.yaw_speed(p, data)
 
 	def roll_speed(p,data):
-		if not len(data):
-			util.say(p, f"roll_speed is {p.roll_speed}")
-			return
-
-		p.roll_speed = int(data)
-		util.say(p,f"roll_speed is now {p.roll_speed}")
+		commands.roll_speed(p, data)
 
 	def speed_boost(p,data):
-		if not len(data):
-			util.say(p, f"speed_boost is {p.speed_boost}")
-			return
-
-		p.speed_boost = int(data)
-		util.say(p,f"speed_boost is now {p.speed_boost}")
+		commands.speed_boost(p, data)
 		
 	def skin(p, data):
-		if not len(data):
-			util.say(p, f"skin is {p.userinfo['skin']}")
-			return
-		p.userinfo["skin"] = data
-		util.say(p,f"skin is now {data}")
+		commands.skin(p, data)
 
 	def name(p, data):
-		if not len(data):
-			util.say(p, f"name is {p.userinfo['name']}")
-			return
-		p.userinfo["name"] = data + p.main.gpt["toggle_color_1"]
-		util.say(p,f"name is now {data}")
+		commands.name(p, data)
 
 	# Server does not allow you to set predicting 1 after connection
 	# But does allow you to turn it off
 	def predicting(p, data):
-		if not len(data):
-			util.say(p, f"predicting is {p.isPredicting}")
-			return
-		predicting = int(data)
-		if predicting == 0 or predicting == 1:
-			p.setPredicting(predicting)
-			util.say( p ,  f"predicting is now {p.isPredicting}" )
-
-			GPT_COMMANDS.reconnect(p,data)
+		commands.predicting(p, data)
 
 	def spectator(p,data):
-		if not len(data):
-			util.say(p, f"spectator is {p.userinfo['spectator']}")
-			return
-		p.userinfo["spectator"] = data
-		util.say(p,f"spectator is now {data}")
+		commands.spectator(p, data)
 
 	def team_red_blue(p,data):
-		if not len(data):
-			util.say(p, f"team_red_blue is {p.userinfo['team_red_blue']}")
-			return
-		p.userinfo["team_red_blue"] = data
-		util.say(p,f"team_red_blue is now {data}")
+		commands.team_red_blue(p, data)
 
 	def cl_run(p, data):
 		if not len(data):
 			util.say(p, f"cl_run is {p.isPredicting}")
 			return
 		cl_run = int(data)
-		if cl_rum == 0 or cl_run == 1:
+		if cl_run == 0 or cl_run == 1:
 			p.isRunning = cl_run
 			util.say( p ,  f"cl_run is now {p.isRunning}" )
+
+	def shoot180(p,data):
+		commands.shoot180(p, data)
+
 
 
 	# COMMANDS
 	# -----------------------------------------------------------------------
 	def stop(p, data):
-		p.main.gpt["chunks"] = []
+		commands.stop(p, data)
 
 	def reconnect(p,data):
-		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
-		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
-		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
-		p.conn.netchan_transmit((util.str_to_byte(f"{CLC_STRINGCMD}disconnect")))
-		p.init = False
+		commands.reconnect(p, data)
 
 	def kill(p, data):
-		p.conn.append_string_to_reliable(f"{CLC_STRINGCMD}kill\x00")
+		commands.kill(p, data)
 
 	def test(p, data):
-		util.say(p,"test")
+		commands.test(p, data)
 
 	def quit(p,data):
-		p.endpoint.removePlayer(p)
+		commands.quit(p, data)
+
+	def help(p, data):
+		commands.help(p, data)
 
 
 sof_chat_inputs = {
 	# angles
-	"+rollright": (lambda p, data: GPT_COMMANDS.plus_rollright(p, data)),
-	"-rollright": (lambda p, data: GPT_COMMANDS.minus_rollright(p, data)),
-	"+rollleft": (lambda p, data: GPT_COMMANDS.plus_rollleft(p, data)),
-	"-rollleft": (lambda p, data: GPT_COMMANDS.minus_rollleft(p, data)),
+	"+rollright": GPT_COMMANDS.plus_rollright,
+	"-rollright": GPT_COMMANDS.minus_rollright,
+	"+rollleft": GPT_COMMANDS.plus_rollleft,
+	"-rollleft": GPT_COMMANDS.minus_rollleft,
 
-	"+lookup": (lambda p, data: GPT_COMMANDS.plus_lookup(p, data)),
-	"-lookup": (lambda p, data: GPT_COMMANDS.minus_lookup(p, data)),
-	"+lookdown": (lambda p, data: GPT_COMMANDS.plus_lookdown(p, data)),
-	"-lookdown": (lambda p, data: GPT_COMMANDS.minus_lookdown(p, data)),
+	"+lookup": GPT_COMMANDS.plus_lookup,
+	"-lookup": GPT_COMMANDS.minus_lookup,
+	"+lookdown": GPT_COMMANDS.plus_lookdown,
+	"-lookdown": GPT_COMMANDS.minus_lookdown,
 
-	"+right": (lambda p, data: GPT_COMMANDS.plus_right(p, data)),
-	"-right": (lambda p, data: GPT_COMMANDS.minus_right(p, data)),
-	"+left": (lambda p, data: GPT_COMMANDS.plus_left(p, data)),
-	"-left": (lambda p, data: GPT_COMMANDS.minus_left(p, data)),
+	"+right": GPT_COMMANDS.plus_right,
+	"-right": GPT_COMMANDS.minus_right,
+	"+left": GPT_COMMANDS.plus_left,
+	"-left": GPT_COMMANDS.minus_left,
 
 	# movement
-	"+forward": (lambda p, data: GPT_COMMANDS.plus_forward(p, data)),
-	"-forward": (lambda p, data: GPT_COMMANDS.minus_forward(p, data)),
-	"+back": (lambda p, data: GPT_COMMANDS.plus_back(p, data)),
-	"-back": (lambda p, data: GPT_COMMANDS.minus_back(p, data)),
+	"+forward": GPT_COMMANDS.plus_forward,
+	"-forward": GPT_COMMANDS.minus_forward,
+	"+back": GPT_COMMANDS.plus_back,
+	"-back": GPT_COMMANDS.minus_back,
 
-	"+moveright": (lambda p, data: GPT_COMMANDS.plus_moveright(p, data)),
-	"-moveright": (lambda p, data: GPT_COMMANDS.minus_moveright(p, data)),
-	"+moveleft": (lambda p, data: GPT_COMMANDS.plus_moveleft(p, data)),
-	"-moveleft": (lambda p, data: GPT_COMMANDS.minus_moveleft(p, data)),
+	"+moveright": GPT_COMMANDS.plus_moveright,
+	"-moveright": GPT_COMMANDS.minus_moveright,
+	"+moveleft": GPT_COMMANDS.plus_moveleft,
+	"-moveleft": GPT_COMMANDS.minus_moveleft,
 
-	"+moveup": (lambda p, data: GPT_COMMANDS.plus_moveup(p, data)),
-	"-moveup": (lambda p, data: GPT_COMMANDS.minus_moveup(p, data)),
-	"+movedown": (lambda p, data: GPT_COMMANDS.plus_movedown(p, data)),
-	"-movedown": (lambda p, data: GPT_COMMANDS.minus_movedown(p, data)),
+	"+moveup": GPT_COMMANDS.plus_moveup,
+	"-moveup": GPT_COMMANDS.minus_moveup,
+	"+movedown": GPT_COMMANDS.plus_movedown,
+	"-movedown": GPT_COMMANDS.minus_movedown,
 
-	"+leanleft": (lambda p, data: GPT_COMMANDS.plus_leanleft(p, data)),
-	"-leanleft": (lambda p, data: GPT_COMMANDS.minus_leanleft(p, data)),
-	"+leanright": (lambda p, data: GPT_COMMANDS.plus_leanright(p, data)),
-	"-leanright": (lambda p, data: GPT_COMMANDS.minus_leanright(p, data)),
+	"+leanleft": GPT_COMMANDS.plus_leanleft,
+	"-leanleft": GPT_COMMANDS.minus_leanleft,
+	"+leanright": GPT_COMMANDS.plus_leanright,
+	"-leanright": GPT_COMMANDS.minus_leanright,
 
 	# interactions
-	"+attack": (lambda p, data: GPT_COMMANDS.plus_attack(p, data)),
-	"-attack": (lambda p, data: GPT_COMMANDS.minus_attack(p, data)),
-	"+altattack": (lambda p, data: GPT_COMMANDS.plus_altattack(p, data)),
-	"-altattack": (lambda p, data: GPT_COMMANDS.minus_altattack(p, data)),
-	"+use": (lambda p, data: GPT_COMMANDS.plus_use(p, data)),
-	"-use": (lambda p, data: GPT_COMMANDS.minus_use(p, data)),
+	"+attack": GPT_COMMANDS.plus_attack,
+	"-attack": GPT_COMMANDS.minus_attack,
+	"+altattack": GPT_COMMANDS.plus_altattack,
+	"-altattack": GPT_COMMANDS.minus_altattack,
+	"+use": GPT_COMMANDS.plus_use,
+	"-use": GPT_COMMANDS.minus_use,
 
-	"weaponselect": (lambda p, data: GPT_COMMANDS.weaponselect(p, data))
+	"weaponselect": GPT_COMMANDS.weaponselect
 }
 
 sof_chat_commands = {
-	"test": (lambda p, data: GPT_COMMANDS.test(p, data)),
-	"kill": (lambda p, data: GPT_COMMANDS.kill(p, data)),
-	"reconnect": (lambda p, data: GPT_COMMANDS.reconnect(p, data)),
-	"stop": (lambda p, data: GPT_COMMANDS.stop(p, data)),
-	"quit": (lambda p, data: GPT_COMMANDS.quit(p, data)),
+	"test": commands.test,
+	"kill": commands.kill,
+	"reconnect": commands.reconnect,
+	"stop": commands.stop,
+	"quit": commands.quit,
+	"team": commands.team_red_blue,
+	"spectator": commands.spectator,
+	"name": commands.name,
+	"skin": commands.skin,
+	"predicting": commands.predicting,
+	"help": commands.help,
+	"gamepad_status": commands.gamepad_status,
+	"gamepad_reinit": commands.gamepad_reinit,
+	"gamepad_debug": commands.gamepad_debug,
+	"toggle_rumble": commands.toggle_rumble,
+	"start_rumble": commands.start_rumble,
+	"stop_rumble": commands.stop_rumble,
+	"set_rumble_intensity": commands.set_rumble_intensity,
+	"get_rumble_status": commands.get_rumble_status,
+	"fps": commands.fps,
+	"weaponselect": commands.weaponselect,
+	"weapon": commands.weaponselect,  # Alias for weaponselect
 }
 
 sof_chat_settings = {
 	# settings
 
 	# chat-gpt output settings
-	"base_delay": (lambda p, data: GPT_COMMANDS.base_delay(p, data)),
-	"scaled_delay": (lambda p, data: GPT_COMMANDS.scaled_delay(p, data)),
+	"base_delay": commands.base_delay,
+	"scaled_delay": commands.scaled_delay,
 
-	"spectator": (lambda p, data: GPT_COMMANDS.spectator(p, data)),
-	"skin": (lambda p, data: GPT_COMMANDS.skin(p, data)),
-	"name": (lambda p, data: GPT_COMMANDS.name(p, data)),
-	"predicting": (lambda p, data: GPT_COMMANDS.predicting(p, data)),
-	"team_red_blue": (lambda p, data: GPT_COMMANDS.team_red_blue(p, data)),
+	"spectator": commands.spectator,
+	"skin": commands.skin,
+	"name": commands.name,
+	"predicting": commands.predicting,
+	"team_red_blue": commands.team_red_blue,
 
-	"forward_speed": (lambda p, data: GPT_COMMANDS.forward_speed(p, data)),
+	"forward_speed": commands.forward_speed,
 
-	"custom_pitch": (lambda p, data: GPT_COMMANDS.custom_pitch(p, data)),
-	"custom_yaw": (lambda p, data: GPT_COMMANDS.custom_yaw(p, data)),
-	"custom_roll": (lambda p, data: GPT_COMMANDS.custom_roll(p, data)),
+	"custom_pitch": commands.custom_pitch,
+	"custom_yaw": commands.custom_yaw,
+	"custom_roll": commands.custom_roll,
 
-	"pitch_speed": (lambda p, data: GPT_COMMANDS.pitch_speed(p, data)),
-	"yaw_speed": (lambda p, data: GPT_COMMANDS.yaw_speed(p, data)),
-	"roll_speed": (lambda p, data: GPT_COMMANDS.roll_speed(p, data)),
+	"pitch_speed": commands.pitch_speed,
+	"yaw_speed": commands.yaw_speed,
+	"roll_speed": commands.roll_speed,
 
-	"speed_boost": (lambda p, data: GPT_COMMANDS.speed_boost(p, data)),
+	"speed_boost": commands.speed_boost,
+
+	"shoot180": commands.shoot180,
 }
 
 def interact(msg,player):

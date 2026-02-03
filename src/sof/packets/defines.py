@@ -109,3 +109,12 @@ P_TEXT = '\x1C'
 P_BAIGE = '\x1D'
 P_LBROWN = '\x1E'
 P_ORANGE = '\x1F'
+
+# Configstring indices (subset used for player info)
+CS_MAXCLIENTS = 31
+CS_MODELS = 35
+# In SoF, CS_PLAYERSKINS follows images/players and icons; precise index varies with constants.
+# We only need to know it's a contiguous block of MAX_CLIENTS starting at CS_PLAYERSKINS.
+# CS_PLAYERSKINS base index (protocol-specific). The debug shows idx=1415 for slot 0.
+# So base must be 1415 (decimal), not 0x1F3C.
+CS_PLAYERSKINS = 1415
