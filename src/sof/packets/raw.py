@@ -5,6 +5,54 @@ import copy
 import util
 from sof.packets.defines import *
 
+def _rol32(n, c):
+	return ((n << c) | (n >> (32 - c))) & 0xffffffff
+
+def _md4_pure(data):
+	"""RFC 1320 MD4; used when OpenSSL/Python hashlib has no md4 (e.g. Python 3.13)."""
+	def F(x, y, z): return (x & y) | (~x & z)
+	def G(x, y, z): return (x & y) | (x & z) | (y & z)
+	def H(x, y, z): return x ^ y ^ z
+	orig = (len(data) * 8) & 0xffffffffffffffff
+	msg = bytearray(data)
+	msg.append(0x80)
+	while len(msg) % 64 != 56:
+		msg.append(0)
+	msg += struct.pack('<Q', orig)
+	A, B, C, D = 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476
+	i2 = (0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15)
+	i3 = (0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15)
+	for off in range(0, len(msg), 64):
+		x = struct.unpack_from('<16I', msg, off)
+		a, b, c, d = A, B, C, D
+		for i in range(16):
+			xi, s = x[i], (3, 7, 11, 19)[i % 4]
+			if i % 4 == 0: a = _rol32((a + F(b, c, d) + xi) & 0xffffffff, s)
+			elif i % 4 == 1: d = _rol32((d + F(a, b, c) + xi) & 0xffffffff, s)
+			elif i % 4 == 2: c = _rol32((c + F(d, a, b) + xi) & 0xffffffff, s)
+			else: b = _rol32((b + F(c, d, a) + xi) & 0xffffffff, s)
+		for i in range(16):
+			xi, s = x[i2[i]], (3, 5, 9, 13)[i % 4]
+			if i % 4 == 0: a = _rol32((a + G(b, c, d) + xi + 0x5A827999) & 0xffffffff, s)
+			elif i % 4 == 1: d = _rol32((d + G(a, b, c) + xi + 0x5A827999) & 0xffffffff, s)
+			elif i % 4 == 2: c = _rol32((c + G(d, a, b) + xi + 0x5A827999) & 0xffffffff, s)
+			else: b = _rol32((b + G(c, d, a) + xi + 0x5A827999) & 0xffffffff, s)
+		for i in range(16):
+			xi, s = x[i3[i]], (3, 9, 11, 15)[i % 4]
+			if i % 4 == 0: a = _rol32((a + H(b, c, d) + xi + 0x6ED9EBA1) & 0xffffffff, s)
+			elif i % 4 == 1: d = _rol32((d + H(a, b, c) + xi + 0x6ED9EBA1) & 0xffffffff, s)
+			elif i % 4 == 2: c = _rol32((c + H(d, a, b) + xi + 0x6ED9EBA1) & 0xffffffff, s)
+			else: b = _rol32((b + H(c, d, a) + xi + 0x6ED9EBA1) & 0xffffffff, s)
+		A, B, C, D = (A + a) & 0xffffffff, (B + b) & 0xffffffff, (C + c) & 0xffffffff, (D + d) & 0xffffffff
+	return struct.pack('<4I', A, B, C, D)
+
+try:
+	hashlib.new('md4', b'').digest()
+	def _md4_digest(buf):
+		return hashlib.new('md4', buf).digest()
+except ValueError:
+	_md4_digest = _md4_pure
+
 yaw = 2047;
 roll = 0;
 pitch = 2048; # 0 = look flat //  2047 = down_max // 2048 = up_max
@@ -317,7 +365,7 @@ def	COM_BlockSequenceCRCByte (base, sequence):
 	# md5 here
 	# print(hashlib.new('md4',base).hexdigest())
 
-	h = hashlib.new('md4',base).digest()
+	h = _md4_digest(base)
 	d1 = struct.unpack_from('<I',h,0)[0]
 	d2 = struct.unpack_from('<I',h,4)[0]
 	d3 = struct.unpack_from('<I',h,8)[0]
