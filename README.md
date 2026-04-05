@@ -1,11 +1,60 @@
-* sudo apt install xvfb chromium
-* pip3 install selenium
-* pip3 install undetected-chromedriver
-* pip3 install webdriver-manager
-* pip3 install pygame
+# sof-gpt
 
+## Install
 
-* add to /etc/ssl/openssl.cnf
+**Python:** 3.10+ recommended. On **3.12+**, dependencies pull in `setuptools` so `undetected-chromedriver` can import `distutils`.
+
+**System (Debian/Ubuntu):**
+
+```bash
+sudo apt install xvfb chromium
+```
+
+**Python packages** (use a venv so system `pip` is untouched):
+
+```bash
+cd /path/to/sof-gpt
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -U pip
+pip install -r requirements.txt
+```
+
+Equivalent without `requirements.txt`:
+
+```bash
+pip install pygame selenium undetected-chromedriver webdriver-manager
+pip install 'setuptools>=69'   # only needed on Python 3.12+
+```
+
+**OpenSSL (legacy provider):** some TLS stacks need legacy algorithms enabled. Add to `/etc/ssl/openssl.cnf` (merge with your existing file; do not duplicate `[openssl_init]` if it already exists):
+
+```
+[openssl_init]
+providers = provider_sect
+
+[provider_sect]
+default = default_sect
+legacy = legacy_sect
+
+[default_sect]
+activate = 1
+
+[legacy_sect]
+activate = 1
+```
+
+## Run
+
+From the repo root (with venv activated):
+
+```bash
+python -m src.main
+```
+
+Optional: `python -m src.main <ip> <port> <name>` to skip the server picker.
+
+---
 
 ## Chat Commands
 
@@ -59,7 +108,7 @@ The command system is designed with a centralized architecture:
 - **`src/sof/chat_bridge.py`** - Handles chat-based command parsing (both `/` and `[` syntax)
 - **`src/sof/client.py`** - Handles terminal-based command parsing
 
-This ensures that all commands behave identically regardless of how they're invoked, and makes maintenance easier by having a single source of truth for command logic.
+This ensures that all commands behave identically regardless of how they are invoked, and makes maintenance easier by having a single source of truth for command logic.
 
 ### Command Availability
 Most commands are available in both interfaces:
@@ -73,31 +122,3 @@ The terminal interface provides quick access to the most commonly used commands,
 - **`/help`** - Shows all available commands in a unified format
 - **Terminal help** - Includes both general commands and terminal-specific commands
 - **Chat help** - Shows the same command list for consistency
-
-```
-[openssl_init]
-providers = provider_sect
-
-# List of providers to load
-[provider_sect]
-default = default_sect
-legacy = legacy_sect
-# The fips section name should match the section name inside the
-# included fipsmodule.cnf.
-# fips = fips_sect
-
-# If no providers are activated explicitly, the default one is activated implicitly.
-# See man 7 OSSL_PROVIDER-default for more details.
-#
-# If you add a section explicitly activating any other provider(s), you most
-# probably need to explicitly activate the default provider, otherwise it
-# becomes unavailable in openssl.  As a consequence applications depending on
-# OpenSSL may not work correctly which could lead to significant system
-# problems including inability to remotely access the system.
-[default_sect]
-activate = 1
-
-[legacy_sect]
-activate = 1
-```
-

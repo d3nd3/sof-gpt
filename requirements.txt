@@ -1,0 +1,7 @@
+# Main client (src/) — GPT browser automation + game UI
+pygame>=2.5
+selenium>=4.0
+undetected-chromedriver>=3.5
+webdriver-manager>=4.0
+# Python 3.12+ removed stdlib distutils; undetected-chromedriver still imports it
+setuptools>=69; python_version >= "3.12"
