@@ -197,12 +197,18 @@ class SofClient:
 				
 				# TODO: THERE IS BUG ON SOME MAPS THAT START PACKET WITH SVC_TMP_ENTITY
 				
-				sof.keys.process(player)
+
+				if player.jump_script["active"]:
+					
+					player.setStateFromScript()
+				else:
+					sof.keys.process(player)
 
 				# Periodic gamepad health check (every 60 frames ~ 0.4 seconds at 145 FPS)
 				if self.framecount % 60 == 0:
 					sof.keys.check_and_reinit_gamepad()
 
+				
 				# send usercmds if connected
 				player.moveAndSend()
 
