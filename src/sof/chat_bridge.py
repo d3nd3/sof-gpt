@@ -139,6 +139,9 @@ class GPT_COMMANDS:
 
 	def speed_boost(p,data):
 		commands.speed_boost(p, data)
+
+	def jump_script(p,data):
+		commands.jump_script(p,data)
 		
 	def skin(p, data):
 		commands.skin(p, data)
@@ -273,6 +276,9 @@ sof_chat_settings = {
 	"base_delay": commands.base_delay,
 	"scaled_delay": commands.scaled_delay,
 
+	#jump script settings
+	"jump_script": commands.jump_script,
+
 	"spectator": commands.spectator,
 	"skin": commands.skin,
 	"name": commands.name,
@@ -313,7 +319,7 @@ def interact(msg,player):
 		# not in a request?lets go
 		# pass
 		# RECURSION???
-		print("Summoning the genie...")
+		print("Summoning the genie...", flush=True)
 		# Calling talkToWorld here is allowing another instance into here.
 		answer = gpt_ask(msg,main.talkToWorld)
 		generate_chunks_gpt(main,answer)

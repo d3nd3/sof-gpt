@@ -5,6 +5,7 @@ This file contains all command functions that can be used by both client.py and 
 
 import util
 import math
+import time
 from sof.packets.types import CLC_STRINGCMD
 
 class Commands:
@@ -134,22 +135,24 @@ class Commands:
     @staticmethod
     def custom_yaw(p, data, terminal=False):
         """Set custom yaw angle"""
-        p.custom_yaw = int(data)
-        message = f"custom_yaw is now {p.custom_yaw}"
-        if terminal:
-            print(message)
-        else:
-            util.say(p, message)
+        if len(data): 
+            p.custom_yaw = int(data)
+            message = f"custom_yaw is now {p.custom_yaw}"
+            if terminal:
+                print(message)
+            else:
+                util.say(p, message)
 
     @staticmethod
     def custom_roll(p, data, terminal=False):
         """Set custom roll angle"""
-        p.custom_roll = int(data)
-        message = f"custom_roll is now {p.custom_roll}"
-        if terminal:
-            print(message)
-        else:
-            util.say(p, message)
+        if len(data): 
+            p.custom_roll = int(data)
+            message = f"custom_roll is now {p.custom_roll}"
+            if terminal:
+                print(message)
+            else:
+                util.say(p, message)
 
     @staticmethod
     def pitch_speed(p, data, terminal=False):
@@ -218,6 +221,101 @@ class Commands:
             print(message)
         else:
             util.say(p, message)
+
+    @staticmethod
+    def jump_script(p, data, terminal=False):
+        data = (data or "").strip()
+        parts = data.split()
+        
+        if not parts:
+            return
+
+        sub_cmd = parts[0].lower()
+        
+        # Define the tunable competitive movement parameters.
+        valid_params = {
+            "sweet_yaw_speed",
+            "min_yaw_speed",
+            "max_yaw_speed",
+            "assumed_jump_duration",
+            "strafe_switch_ratio"
+        }
+
+        if sub_cmd == "start":
+            p.jump_script["active"] = True
+            p.jump_script["timestamp_jump_reset"] = time.time()
+            p.jump_script["jump_count"] = 0
+            p.jump_script["is_right_jump"] = True
+            util.say(p, "Jumping Script started!")
+            print("jump script started!")
+
+        elif sub_cmd == "stop":
+            p.jump_script["active"] = False
+            p.input.moveForward = False
+            p.input.moveRight = False
+            p.input.moveLeft = False
+            p.input.moveUp = False
+            util.say(p, "Jumping Script stopped!")
+            print("jump script stopped!")
+
+        elif sub_cmd == "respawn":
+            p.input.use = True
+            
+        elif sub_cmd == "get":
+            # If a specific parameter is requested (e.g., 'get sweet_yaw_speed')
+            if len(parts) > 1:
+                param = parts[1]
+                if param in valid_params:
+                    val = p.jump_script.get(param, "N/A")
+                    message = f"{param} is currently {val}"
+                else:
+                    message = f"Invalid parameter. Allowed: {', '.join(valid_params)}"
+            # If no parameter is specified, return all of them
+            else:
+                results = []
+                for param in valid_params:
+                    val = p.jump_script.get(param, "N/A")
+                    results.append(f"{param}: {val}")
+                message = " | ".join(results)
+                
+            if terminal:
+                print(message, flush=True)
+            else:
+                util.say(p, message)
+
+        elif sub_cmd == "set":
+            if len(parts) >= 3:
+                param = parts[1]
+                value_str = parts[2]
+                
+                if param in valid_params:
+                    try:
+                        val = float(value_str)
+                        p.jump_script[param] = val
+                        message = f"{param} is now {val}"
+                    except ValueError:
+                        message = f"Invalid float value for {param}: '{value_str}'"
+                else:
+                    message = f"Invalid parameter. Allowed: {', '.join(valid_params)}"
+            else:
+                message = "Missing arguments. Use: set <parameter_name> <value>"
+                
+            if terminal:
+                print(message, flush=True)
+            else:
+                util.say(p, message)
+                
+        else:
+            error_msg = "Unknown command. Use: start, stop, respawn, get, or set."
+            if terminal:
+                print(error_msg, flush=True)
+            else:
+                util.say(p, error_msg)
+        
+
+
+                
+
 
     # GPT and chat settings
     @staticmethod
@@ -518,6 +616,8 @@ class Commands:
 /base_delay <value> - Set GPT response delay
 /scaled_delay <value> - Set scaled response delay
 /fps [value] - Set or show target FPS
+# /jump_script
+# /jump_dur
 
 Examples:
 /team 1          # Join blue team

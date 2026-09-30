@@ -1,5 +1,5 @@
 # Main client (src/) — GPT browser automation + game UI
-pygame>=2.5
+pygame-ce>=2.5.0
 selenium>=4.0
 undetected-chromedriver>=3.5
 webdriver-manager>=4.0

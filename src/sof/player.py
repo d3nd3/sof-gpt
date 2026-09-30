@@ -151,6 +151,15 @@ class Player:
 		self.prev_health = self.health
 		self.prev_armor = self.armor
 
+		
+		self.jump_script = {
+			"active" : False,
+			"timestamp_jump_reset" : 0,
+			"assumed_jump_duration" : 0,
+			"jump_count" : 0,
+			"is_right_jump" : True,
+			"sweet_yaw_speed" : 180.0
+		}
 
 	def initialize(self):
 		self.init = True
@@ -444,3 +453,43 @@ class Player:
 			self.internal_allowed_to_fire2 = False
 		else:
 			self.internal_allowed_to_fire2 = True
+
+
+	# a jump script for strafe1a
+	def setStateFromScript(self):
+
+		self.input.moveForward = True
+
+		# Set the optimal turn speed for the bunny hop swing.
+		# You may need to tune this value depending on the server's air acceleration.
+		# It's recommended to initialize "sweet_yaw_speed" in your jump_script dict.
+		self.yaw_speed = self.jump_script.get("sweet_yaw_speed", 150.0) 
+
+		if time.time() - self.jump_script["timestamp_jump_reset"] > self.jump_script["assumed_jump_duration"]:
+		    self.input.moveUp = True
+		    # a new jump
+		    self.jump_script["timestamp_jump_reset"] = time.time()
+		    self.jump_script["jump_count"] += 1
+
+		    if self.jump_script["is_right_jump"]:
+		        # Strafe right, look right
+		        self.input.moveRight = True
+		        self.input.moveLeft = False
+		        
+		        self.input.lookRight = True
+		        self.input.lookLeft = False
+		    else:
+		        # Strafe left, look left
+		        self.input.moveLeft = True
+		        self.input.moveRight = False
+		        
+		        self.input.lookLeft = True
+		        self.input.lookRight = False
+
+		    # Toggle the direction for the next jump
+		    self.jump_script["is_right_jump"] = not self.jump_script["is_right_jump"]
+		    
+		else:
+		    # Release the jump button while in the air so we don't double-trigger,
+		    # but leave the strafe and look inputs held down to continue the mid-air sweep.
+		    self.input.moveUp = False
