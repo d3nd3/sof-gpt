@@ -313,6 +313,20 @@ class Player:
 		self.conn.netchan_transmit(buffer2)
 
 
+	def resolve_lean(self):
+		"""Resolve lean for this usercmd: -1 right, +1 left; later rules win."""
+		lean = 0
+		if self.input.use:
+			if self.input.moveRight:
+				lean = -1
+			if self.input.moveLeft:
+				lean = 1
+		if self.input.leanRight:
+			lean = -1
+		if self.input.leanLeft:
+			lean = 1
+		return lean
+
 	# The cmd is freshly created every frame starting off at 0.
 	def applyMove(self):
 
@@ -424,10 +438,7 @@ class Player:
 		else:
 			self.internal_allowed_to_fire_basic = True
 
-		if self.input.leanRight:
-			cmd.lean = 1
-		elif self.input.leanLeft:
-			cmd.lean = 2
+		cmd.lean = self.resolve_lean()
 
 		# cmd.lightLevel = 90
 		cmd.lightLevel = 0x5
