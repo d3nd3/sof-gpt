@@ -1,5 +1,7 @@
 # sof-gpt
 
+Prefer pictures? Start with **[HUMANS.md](HUMANS.md)**.
+
 ## Install
 
 **Python:** 3.10+ recommended. On **3.12+**, dependencies pull in `setuptools` so `undetected-chromedriver` can import `distutils`.

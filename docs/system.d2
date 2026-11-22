@@ -1,0 +1,105 @@
+# sof-gpt — system overview (source of truth).
+# A headless Soldier of Fortune client in Python: speaks the net protocol itself,
+# reads chat, and answers through the ChatGPT web UI in a real browser.
+# Render: scripts/render-diagram.sh (svg light+dark, png dark for gpm desktop).
+
+title: |md
+  **sof-gpt** — a bot player for Soldier of Fortune: hand-rolled netchan + usercmds, chat in, ChatGPT (driven in Chrome) out, spoken back into game chat
+| {near: top-center}
+
+direction: right
+grid-columns: 2
+grid-rows: 2
+
+entry: Entry points {
+  direction: down
+  main: `python -m src.main` · pick server, player name, how many clients to spawn
+  picker: `src/sof/server_list.py` · TCP master list, then a UDP info probe per server, called by `main`
+  term: terminal console in `src/sof/client.py` · `/gpt`, `/say`, `/rcon`, `/help`
+  pad: `src/sof/keys.py` + pygame · keyboard or gamepad → usercmd fields
+  chatui: `src/ui/chat_gui.py` · tkinter chat and RCON windows, tk or pygame sounds
+}
+
+core: Core · protocol client, commands, ChatGPT bridge {
+  direction: down
+  client: `src/sof/client.py` · endpoints and players, `~/.config` settings, RCON packets, main loop
+  conn: `src/sof/connection.py` · hand-built netchan: seq/ack, reliable queue, fragments, keepalive
+  packets: `src/sof/packets/` · packet parsers, delta entities, `COM_BlockSequenceCRCByte`
+  player: `src/sof/player.py` · one usercmd per tick: viewangles, move flags, msec
+  cmds: `src/sof/commands.py` · single command table shared by terminal and chat
+  bridge: "`src/sof/chat_bridge.py` · chat line → [setting] or GPT prompt — reply chunked to 150 chars, paced"
+  gpt: `src/gpt/ask_question.py` · undetected Chrome types into chat.openai.com, scrapes the growing answer
+  lister: "`sof-server-lister/` · vendored and not imported — PyQt4 server browser (oldpysof)"
+}
+
+state: State · survives a restart {
+  direction: down
+  cfg: `~/.config/config.json` · RCON password per ip:port + audio and notification flags
+  chrome: `~/.config/sof-gpt-chromium` · Chrome profile holding the ChatGPT login (path hardcoded)
+  venv: `new_venv/` · 98 MB local venv, untracked — not part of the app
+}
+
+ext: External {
+  direction: down
+  master: `sof1master.megalag.org:28900` · master server list, plain TCP
+  server: SoF game server · UDP, protocol spoken by `connection.py` and `packets/`
+  chatgpt: `chat.openai.com` · web UI only, no API key anywhere in the repo
+  chromedrv: Chrome/Chromium + chromedriver · major version probed from the OS at import
+  xvfb: Xvfb · `question.sh` / `sofbot.sh` run the browser headless
+}
+
+entry.main -> core.client
+entry.term -> core.cmds: "same handler table"
+entry.pad -> core.player
+entry.chatui -> core.client: "say / rcon"
+
+core.client -> core.conn
+core.client -> core.player
+core.client -> core.gpt
+core.conn -> core.packets
+core.player -> core.conn: "usercmd bytes"
+core.bridge -> core.cmds: "`[cmd]` settings"
+core.bridge -> core.gpt: "plain chat"
+core.gpt -> core.bridge: "answer text"
+core.client -> core.bridge: "chat lines in"
+core.packets -> core.bridge: "say_team / say"
+
+core.client -> state.cfg
+core.gpt -> state.chrome
+core.client -> ext.server: "UDP netchan"
+entry.picker -> ext.master
+core.gpt -> ext.chatgpt
+core.gpt -> ext.chromedrv
+
+classes: {
+  entry: {style.stroke: "#118ab2"; style.stroke-width: 2}
+  core: {style.stroke: "#2a9d8f"; style.stroke-width: 2}
+  store: {style.stroke: "#e9c46a"; style.stroke-width: 2}
+  ext: {style.stroke: "#9b5de5"; style.stroke-width: 2; style.stroke-dash: 4}
+  gap: {style.stroke: "#ef476f"; style.stroke-width: 2; style.stroke-dash: 3}
+}
+
+entry.main.class: entry
+entry.picker.class: entry
+entry.term.class: entry
+entry.pad.class: entry
+entry.chatui.class: entry
+
+core.client.class: core
+core.conn.class: core
+core.packets.class: core
+core.player.class: core
+core.cmds.class: core
+core.bridge.class: core
+core.gpt.class: core
+core.lister.class: gap
+
+state.cfg.shape: cylinder
+state.chrome.shape: cylinder
+state.venv.shape: cylinder
+
+ext.master.class: ext
+ext.server.class: ext
+ext.chatgpt.class: ext
+ext.chromedrv.class: ext
+ext.xvfb.class: ext
